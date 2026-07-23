@@ -14,6 +14,10 @@ NetworkPrinter is a comprehensive macOS application designed to help users disco
 
 ![NetworkPrinter App Settings UI](images/app_settings_ui.png)
 
+![Print Servers Settings](images/print_servers_settings.png)
+
+![Driver Mappings (Google Sheets) Settings](images/driver_mappings_settings.png)
+
 ---
 
 ## 📦 Configuration Samples
