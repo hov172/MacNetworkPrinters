@@ -772,6 +772,35 @@ Deployment facts to be aware of:
 * **Admins** install directly and are unaffected whether or not the helper is enabled. A **standard user** whose helper isn't yet approved gets an actionable *"open Login Items"* message rather than a silent failure. XPC calls are bounded by a timeout so an unreachable helper can't hang the UI.
 * Server-side, the daemon builds the `lpadmin` arguments itself from validated pieces (printer name, device-URI scheme, and a driver confirmed against its own `lpinfo -m` inventory — driverless `everywhere` included) and stages PPD files into a root-owned temporary file. It never accepts raw arguments or credentials.
 
+To pre-approve the helper fleet-wide (no Login Items click on each Mac), deploy a **Managed Login Items** payload alongside the settings profile:
+
+```xml
+<dict>
+    <key>PayloadType</key>
+    <string>com.apple.servicemanagement</string>
+    <key>PayloadIdentifier</key>
+    <string>com.yourorg.networkprinter.helper-approval</string>
+    <key>PayloadUUID</key>
+    <string>GENERATED-UUID-HERE</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>Rules</key>
+    <array>
+        <dict>
+            <key>RuleType</key>
+            <string>TeamIdentifier</string>
+            <key>RuleValue</key>
+            <string>YOUR_TEAM_ID</string>
+            <key>Comment</key>
+            <string>Pre-approve NetworkPrinter privileged install helper</string>
+        </dict>
+    </array>
+</dict>
+```
+
+**Local Network permission cannot be pre-granted.** There is no MDM payload for macOS's Local Network privacy prompt — on first discovery every Mac asks the user to Allow once (System Settings › Privacy & Security › Local Network). Plan help-desk messaging accordingly.
+
+
 ---
 
 ## 🔄 Updating the App

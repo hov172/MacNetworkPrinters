@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!--
+    DEPLOYMENT NOTES
+    ================
+    1) Local Network permission (macOS 15+): there is NO MDM payload that can
+       pre-grant Local Network access. On first discovery each Mac shows
+       "NetworkPrinter would like to find and connect to devices on your local
+       network" — users must click Allow once. AirPrint / IPP Everywhere / mDNS
+       discovery finds nothing until then (System Settings > Privacy & Security
+       > Local Network).
+    2) Privileged helper pre-approval: standard-user installs use the bundled
+       SMAppService daemon (com.ayala.solutions.NetworkPrinter.installhelper).
+       It CAN be pre-approved fleet-wide with a Managed Login Items payload
+       (com.apple.servicemanagement) rule matching the app's Team Identifier —
+       see the README's deployment section for the exact payload.
+-->
+
 <dict>
     <key>PayloadDisplayName</key>
     <string>Network Printer Settings</string>
