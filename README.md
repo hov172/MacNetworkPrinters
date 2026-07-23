@@ -8,35 +8,28 @@
 
 # 🖨️ NetworkPrinter macOS Application
 
-NetworkPrinter is a comprehensive macOS application designed to help users discover and install network printers from both SMB/Windows print servers and IPP (Internet Printing Protocol) servers. The application features a modern SwiftUI interface with comprehensive driver selection capabilities and is built to robustly read and apply settings managed via configuration profiles.
+NetworkPrinter is a macOS application designed to help users discover and install printers shared via **SMB/CIFS (Windows) print servers** and locally attached **USB** printers. The application features a modern SwiftUI interface with comprehensive driver selection capabilities and is built to robustly read and apply settings managed via configuration profiles.
 
-![NetworkPrinter Main UI](docs/images/main_ui.png)
+> **Scope**: This app targets **SMB/CIFS and USB only**. It is **not** an IPP/AirPrint client — there is no IPP, IPPS, or AirPrint discovery or installation path.
 
-![NetworkPrinter App Settings UI](docs/images/app_settings_ui.png)
+![NetworkPrinter Main UI](./docs/images/main_ui_placeholder.png)
 
-![Print Servers Settings](docs/images/print_servers_settings.png)
-
-![Driver Mappings (Google Sheets) Settings](docs/images/driver_mappings_settings.png)
-
-![Auto-Installation and Printer Install Helper Settings](docs/images/auto_install_helper_settings.png)
+![NetworkPrinter App Settings UI](./docs/images/app_settings_ui_placeholder.png)
 
 ---
 
 ## ✨ Features
 
 * **🎨 Modern SwiftUI Interface**: Clean, intuitive design with smooth animations and responsive layouts
-* **🔍 Multi-Protocol Discovery**: Automatically discover printers across SMB print servers, IPP servers, local mDNS/AirPrint, IPP Everywhere, and USB — all sources run **concurrently** and are de-duplicated centrally
-* **🧠 Hybrid Driver Detection**: When a printer isn't in the IT driver mapping, the app resolves a real driver the way Apple's *Add Printer* does — advertised make-and-model / driverless "everywhere" for IPP, share-comment parsing plus a fuzzy match against the CUPS driver database for SMB queues — instead of blindly falling back to generic PostScript
-* **🎫 Kerberos / SSO**: On a machine with a valid Kerberos ticket the app skips the password prompt, browses SMB without a password, and installs queues with `auth-info-required=negotiate` — no password stored. The auth mode is re-evaluated before each operation with realm validation, so an expired ticket cleanly falls back to username/password (distinct "ticket expired" / "realm mismatch" errors)
-* **🧑‍💻 Standard-User Installs**: An optional bundled privileged helper (SMAppService LaunchDaemon with a code-signing-pinned XPC interface) lets **non-admin** users install and remove printers; admins need no setup
-* **🔐 Enforced MDM Policy**: Managed permission keys are actually enforced — install/remove actions are hidden *and* guarded in the manager, server-field edits are gated, authentication prompts are gated, and IPP SSL/port settings drive the real target
-* **🤖 Working Auto-Install**: Silently install a named allowlist of printers (or all print-server-published queues) at launch, optionally setting a system default — idempotent per session
-* **📡 Real-time Status Updates**: Live printer status monitoring and installation progress tracking; installation status is checked with a single bulk `lpstat -p`
-* **🔎 Search and Filter**: Quickly find printers by name or location across all protocols
-* **📦 Batch Operations**: Select and install multiple printers at once from any protocol
-* **🔐 MDM Configuration**: Supports managed deployment via macOS configuration profiles
-* **🪵 Redacted, Gated Logging**: Credentials are redacted before anything is written; the detailed file log is gated by `EnableDetailedLogging` (errors are always logged)
-* **🌐 Protocol Flexibility**: Support for SMB/CIFS, IPP/IPPS, and mixed environments
+* **🔍 Printer Discovery**: Concurrently discovers SMB/CIFS print-server queues and local USB printers, de-duplicated centrally
+* **🧠 Hybrid Driver Detection**: IT mapping wins; unmapped SMB printers auto-resolve via share-comment model parsing + fuzzy `lpinfo -m` matching, with generic + manual picker only as a last resort — mapping is now fallback-optional
+* **🎫 Kerberos / Single Sign-On**: On a Mac with a valid Kerberos ticket, browses and installs SMB queues passwordless; falls back to username/password
+* **🧑‍💼 Standard-User Installs**: A signed `SMAppService` privileged helper lets non-admins install/remove printers; admins install directly
+* **🛡️ Enforced MDM Policy**: `AllowUserInstall` / `AllowUserUninstall` / `AllowUserServerChange` / `RequireAuthentication` are now enforced, not just stored
+* **⚙️ Working Auto-Install**: `AutoInstallPrinters` with `AutoInstallPrinterNames` scoping (empty list = configured-server SMB queues only, never USB)
+* **📡 Real-time Status Updates**: Live printer status monitoring and installation progress tracking
+* **🔐 Credential Hygiene**: Passwords never appear in process arguments or device URIs; logs are credential-redacted
+* **🪵 Gated Logging**: Detailed file logging controlled by `EnableDetailedLogging`; errors always logged
 
 ---
 
@@ -44,51 +37,46 @@ NetworkPrinter is a comprehensive macOS application designed to help users disco
 
 The app is built using a modern, modular service-based architecture:
 
-* **PrinterManager**: Orchestrates concurrent multi-source discovery, installation, and status updates; enforces MDM permission policy (blocked actions throw a "not permitted" error)
-* **PreferencesManager**: Reads and manages both local and MDM-supplied preferences for all protocols
-* **ProcessRunner**: The single async runner for every subprocess call (`lpadmin`, `lpinfo`, `smbutil`, `ippfind`, `ipptool`, `dig`, `security`, `snmpget`, `gunzip`, `lpstat`, …) — enforces per-command timeouts, drains stdout/stderr concurrently to avoid pipe deadlocks, and terminates the child process on cancellation
-* **PrinterDiscoveryService** (SMB) and **IPPDiscoveryService** (IPP/AirPrint): Dedicated per-protocol discovery; independent sources and individual mDNS service types run in parallel and are de-duplicated centrally
-* **DriverMatching** (`ModelExtractor` + `DriverMatcher`): Extracts a printer model from advertised attributes or SMB share text and fuzzy-matches it against the CUPS driver database (`lpinfo -m`)
-* **KerberosService**: Detects a valid ticket (`klist`) and drives the password-free SSO/negotiate install path
-* **HelperClient + PrinterInstallHelper daemon**: XPC client and the bundled SMAppService LaunchDaemon (strict, code-signing-pinned interface) that lets standard users install/remove printers; the app routes `lpadmin` through it when enabled, otherwise runs `lpadmin` directly
-* **PrinterInstallationService**: Unified installation for both protocols (direct or via the helper)
-* **PrinterStatusService**: Bulk installation-status checks (`lpstat -p`)
-* **DriverManagementService**: Loads driver mappings (bundled, MDM, remote JSON, Google Sheets)
-* **KeychainService**: Stores and reuses validated domain credentials so users aren't re-prompted every launch
-* **FileLogging**: Credential-redacted, `EnableDetailedLogging`-gated OSLog + file logging
+* **PrinterManager**: Handles discovery, installation, and status updates
+* **PreferencesManager**: Reads and manages both local and MDM-supplied preferences
+* **Service Layer**: Modular services for discovery, installation, and driver operations
 * **UI Components**: SwiftUI-based views like `PrinterListView`, `DriverSelectionView`, `PrinterHeaderView`
 * **Styling System**: Unified design language with consistent colors, fonts, and components
 
 ---
 
-## 🧠 Driver Management
+## 🧠 How Driver Detection Works (Hybrid)
 
-When a printer **is** in the IT driver mapping, that mapping always wins. When it is **not**, the app resolves a driver the way Apple's *Add Printer* effectively does — instead of silently falling back to generic PostScript — using this order:
+Mapping is now **fallback-optional** — you no longer have to map every printer. The IT mapping table (MDM `PrinterDriverMappings`, a remote JSON/CSV endpoint, or a Google Sheet) is still the **highest-priority** source and an explicit entry always wins, but it is now a convenience for overrides and edge cases rather than a hard requirement.
 
-1. **IT driver mapping** — an exact/normalized match from the Google Sheet or MDM `PrinterDriverMappings` takes priority over everything else.
-2. **Advertised make-and-model (IPP/AirPrint)** — for IPP/AirPrint printers the app reads the printer's own attributes (`ipptool get-printer-attributes`) and prefers driverless **`everywhere`** when the printer supports it.
-3. **SMB share-comment parse + fuzzy match** — for SMB print-server queues the model is parsed out of the share comment/location text (e.g. *"Financial Aid HP LaserJet P3015n"*) and fuzzy-matched against the CUPS driver database (`lpinfo -m`) with a tokenized score that weights model numbers and tolerates suffixes (so `P3015n` matches the `HP LaserJet P3015` PPD).
-4. **SNMP** — queried **only** against a real printer IP, never against the SMB print server.
-5. **Generic + manual picker** — the generic driver and the manual driver picker are used only when nothing clears the confidence threshold.
+Driver resolution order:
 
-This hybrid resolution runs entirely through **`DriverMatching`** (`ModelExtractor` + `DriverMatcher`) and the `DriverManagementService`, so IT can override any result with an explicit mapping.
+1. **IT driver mapping (highest priority)** — an exact/fuzzy entry from MDM, the remote endpoint, or the Google Sheet always wins. Use it for overrides.
+2. **SMB print-server queues** — the app parses the printer model out of the share **comment/location** text (e.g. `Financial Aid HP LaserJet P3015n`) and **fuzzy-matches** it against the CUPS driver database (`lpinfo -m`). The tokenized score weights model numbers and tolerates suffixes, so `P3015n` matches the `HP LaserJet P3015` PPD.
+3. **SNMP** is only queried against a real **printer IP**, never against an SMB print server.
+4. **Generic driver + manual picker (last resort)** — used **only** when nothing above clears the confidence threshold. Unmapped printers are no longer given a generic driver by default (`AllowFallbackWithGenericSuggestion` still gates whether generic is offered).
 
-### Detection by Connection Type
+See **[NetworkPrinter_Driver_Mapping_Guide.md](./NetworkPrinter_Driver_Mapping_Guide.md)** for the full mapping guide.
 
-Driver auto-detection works on **every** connection type — all installs route through the same hybrid resolver:
+---
 
-| Connection | Detection path | If nothing matches |
-|---|---|---|
-| **IPP server / AirPrint / IPP Everywhere** | IT mapping → driverless `everywhere` when the printer advertises AirPrint/IPP Everywhere → the printer's own advertised make-and-model via `ipptool` (the mapping can also match that string) → fuzzy match against the CUPS driver database | Falls back to **driverless** — always a working endpoint |
-| **SMB print server** | IT mapping → model parsed from the share comment/location (e.g. *"Financial Aid HP LaserJet P3015n"*) → SNMP (only against a real printer IP, never the print server) → PPD cache + `lpinfo -m` fuzzy match | Manual driver picker |
-| **USB** | IT mapping → the device-reported make-and-model → PPD cache + `lpinfo -m` fuzzy match | Manual driver picker |
+## 🎫 Authentication: Kerberos / SSO, Reused Credentials, Standard Users
 
-Three guarantees, regardless of connection type:
+* **Kerberos / single sign-on** — on a machine with a valid Kerberos ticket, the app **skips the password prompt**, browses SMB **passwordless**, and installs SMB queues using `auth-info-required=negotiate` with no password stored. The authentication mode is **re-evaluated before each discovery/install/remove** (re-checking `klist` and validating the ticket's realm against the configured domain) rather than latched at launch — so a ticket that expires mid-session cleanly falls back to a username/password sign-in instead of configuring a queue for stale credentials, and mismatches surface as distinct **"ticket expired"** vs **"realm mismatch"** errors.
+* **Reused domain credentials** — validated domain credentials are stored in the Keychain and reused on next launch (subject to `RequireAuthentication` and Kerberos), so users aren't re-prompted every time.
+* **Standard-user installs via a privileged helper** — a bundled `SMAppService` LaunchDaemon (`com.ayala.solutions.NetworkPrinter.installhelper`) with a code-signing-pinned XPC interface lets standard (non-admin) users install and remove printers. It requires a **signed & notarized build** (the helper embeds an `Info.plist` so its signed identity matches the app's code-signing requirement) and a **one-time approval** (System Settings › Login Items, or pre-approved via an MDM Managed Login Items profile keyed on the app's Team ID). **Admins** install directly and need no setup. A **standard user** whose helper isn't yet approved gets an actionable *"open Login Items"* message rather than a silent failure. XPC calls are bounded by a timeout so an unreachable helper can't hang the UI. Server-side, the daemon builds the `lpadmin` arguments itself from validated pieces (name, device-URI scheme, driver confirmed against `lpinfo -m`) and stages PPDs into a root-owned temp file — it never accepts raw arguments or credentials.
+* **Credential hygiene** — passwords are never placed in command arguments or persisted CUPS device URIs. The `security` keychain command reads its input from stdin, and log output is credential-redacted (URI `user:pass@`, `//DOMAIN;user:pass`, `-w`/`--password`, `PASSWD`-style env names, and Google API keys).
 
-1. **The IT mapping (Google Sheets / MDM) always wins first**, so fleet-managed printers behave identically however they are discovered.
-2. **Low-confidence results never install silently** — a generic or below-threshold match surfaces the manual driver picker instead of installing the wrong driver.
-3. **Standard-user installs resolve identically** — the privileged helper re-validates the chosen driver against its own `lpinfo -m` inventory and accepts driverless for IPP.
+---
 
+## ⚙️ Auto-Install Behavior
+
+`AutoInstallPrinters` now actually installs printers. Scope is controlled by `AutoInstallPrinterNames`:
+
+* **Names listed** → only those printers are auto-installed (case-insensitive match).
+* **List empty** → only printers **published by the configured print server(s)** are auto-installed — never ad-hoc discoveries and **never USB**.
+
+`AutoInstallDefaultPrinter` is set as the system default when it matches an installed printer. Auto-install is idempotent within a session. Discovery is **concurrent** (SMB and USB sources run in parallel and are de-duplicated), and a refresh finishes before the UI reports success; when every source fails the app surfaces a real error instead of an empty list.
 
 ---
 
@@ -101,7 +89,6 @@ Three guarantees, regardless of connection type:
 
    * `<string>Your Organization</string>` → `<string>Acme Corporation</string>`
    * Replace `YOUR_PRINTSERVER_HOSTNAME_OR_IP` and other placeholders
-   * Configure both SMB and IPP settings as needed
 3. Deploy via MDM (Jamf, Intune, etc.) or manually:
    ```bash
    sudo profiles -I -F NetworkPrinterSettings.mobileconfig
@@ -109,9 +96,9 @@ Three guarantees, regardless of connection type:
 
 ### 🔧 Complete Configuration Examples
 
-#### 🏢 Example 1: Mixed Protocol Business Setup
+#### 🏢 Example 1: Small Business Setup
 
-**Scenario**: Business with both SMB Windows print server and modern IPP server
+**Scenario**: Small business with one print server, allowing user flexibility
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -138,7 +125,7 @@ Three guarantees, regardless of connection type:
     <array>
         <dict>
             <key>PayloadDescription</key>
-            <string>Configures Network Printer application settings for mixed SMB/IPP environment</string>
+            <string>Configures Network Printer application settings</string>
             <key>PayloadDisplayName</key>
             <string>Network Printer App Preferences</string>
             <key>PayloadIdentifier</key>
@@ -162,27 +149,13 @@ Three guarantees, regardless of connection type:
                         <dict>
                             <key>mcx_preference_settings</key>
                             <dict>
-                                <!-- Multi-Protocol Discovery -->
-                                <key>DiscoveryMode</key>
-                                <string>Both</string>
-                                
-                                <!-- SMB Server Configuration -->
+                                <!-- Basic server configuration -->
                                 <key>PrintServerHost</key>
                                 <string>printserver.acmecorp.com</string>
                                 <key>PrintServerPort</key>
                                 <integer>445</integer>
                                 <key>PrintServerDomain</key>
                                 <string>ACME</string>
-                                
-                                <!-- IPP Server Configuration -->
-                                <key>IPPServerHost</key>
-                                <string>ippserver.acmecorp.com</string>
-                                <key>IPPServerPort</key>
-                                <integer>631</integer>
-                                <key>IPPUseSSL</key>
-                                <false/>
-                                <key>IPPRequireAuthentication</key>
-                                <true/>
                                 
                                 <!-- User authentication -->
                                 <key>RequireAuthentication</key>
@@ -201,12 +174,9 @@ Three guarantees, regardless of connection type:
                                 <!-- Installation preferences -->
                                 <key>AutoInstallPrinters</key>
                                 <false/>
-                                <!-- Non-empty: only these named printers auto-install.
-                                     Empty: only print-server-published queues auto-install. -->
+                                <!-- Empty: only configured-server SMB queues auto-install (never USB) -->
                                 <key>AutoInstallPrinterNames</key>
-                                <array>
-                                    <string>Office-Printer-Main</string>
-                                </array>
+                                <array/>
                                 <key>AutoInstallDefaultPrinter</key>
                                 <string></string>
                                 
@@ -216,23 +186,16 @@ Three guarantees, regardless of connection type:
                                 <key>AllowFallbackWithGenericSuggestion</key>
                                 <true/>
                                 
-                                <!-- Driver mappings work for BOTH SMB and IPP -->
+                                <!-- Basic driver mappings -->
                                 <key>PrinterDriverMappings</key>
                                 <dict>
-                                    <!-- SMB Printers -->
-                                    <key>CORP-HP-LaserJet-FL1</key>
+                                    <key>Office-HP-LaserJet</key>
                                     <string>/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz</string>
-                                    <key>CORP-Canon-Copier-FL2</key>
+                                    <key>Reception-Canon-Copier</key>
                                     <string>/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz</string>
-                                    
-                                    <!-- IPP Printers -->
-                                    <key>Office-Printer-Main</key>
-                                    <string>/Library/Printers/PPDs/Contents/Resources/HP Color LaserJet.ppd.gz</string>
-                                    <key>Reception-Color-Printer</key>
-                                    <string>/Library/Printers/PPDs/Contents/Resources/Canon Color ImageCLASS.ppd.gz</string>
                                 </dict>
                                 
-                                <!-- Remote management disabled for simplicity -->
+                                <!-- Remote management disabled -->
                                 <key>DriverMappingsURL</key>
                                 <string></string>
                                 <key>GoogleSheetsID</key>
@@ -253,215 +216,412 @@ Three guarantees, regardless of connection type:
 ```
 
 **Key Features**:
-- Discovers printers from both SMB and IPP servers
 - Users can modify server settings if needed
-- Authentication configured for both protocols
-- Driver mappings work for both SMB and IPP printers
+- Authentication required with pre-filled domain
+- Manual printer selection (no auto-install)
+- Basic driver mappings for common printers
 - Fallback to generic drivers allowed
 
-#### 🌐 Example 2: IPP-Only Modern Environment
+---
 
-**Scenario**: Modern organization using only IPP/CUPS servers
+#### 🏭 Example 2: Enterprise Lock-Down
+
+**Scenario**: Large enterprise with strict IT control, no user modifications allowed
 
 ```xml
-<key>mcx_preference_settings</key>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
 <dict>
-    <!-- IPP-Only Discovery -->
-    <key>DiscoveryMode</key>
-    <string>IPP</string>
-    
-    <!-- IPP Server Configuration -->
-    <key>IPPServerHost</key>
-    <string>cups.moderncompany.com</string>
-    <key>IPPServerPort</key>
-    <integer>631</integer>
-    <key>IPPUseSSL</key>
+    <key>PayloadDisplayName</key>
+    <string>Enterprise Network Printer Settings</string>
+    <key>PayloadIdentifier</key>
+    <string>com.enterprise.networkprinter.configuration</string>
+    <key>PayloadOrganization</key>
+    <string>Enterprise Corp</string>
+    <key>PayloadRemovalDisallowed</key>
     <true/>
-    <key>IPPRequireAuthentication</key>
-    <true/>
-    
-    <!-- Authentication -->
-    <key>RequireAuthentication</key>
-    <true/>
-    <key>DefaultDomain</key>
-    <string>MODERN</string>
-    
-    <!-- IPP Printer Mappings -->
-    <key>PrinterDriverMappings</key>
-    <dict>
-        <key>Office-Color-Printer</key>
-        <string>/Library/Printers/PPDs/Contents/Resources/HP Color LaserJet.ppd.gz</string>
-        <key>Engineering-Plotter</key>
-        <string>/Library/Printers/PPDs/Contents/Resources/HP DesignJet.ppd.gz</string>
-        <key>Reception-MFP</key>
-        <string>/Library/Printers/PPDs/Contents/Resources/Canon Color ImageCLASS.ppd.gz</string>
-    </dict>
+    <key>PayloadScope</key>
+    <string>System</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>87654321-4321-4321-4321-210987654321</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadDescription</key>
+            <string>Locked enterprise printer configuration</string>
+            <key>PayloadDisplayName</key>
+            <string>Enterprise Printer Settings</string>
+            <key>PayloadIdentifier</key>
+            <string>com.networkprinter.preferences</string>
+            <key>PayloadOrganization</key>
+            <string>Enterprise Corp</string>
+            <key>PayloadType</key>
+            <string>com.apple.ManagedClient.preferences</string>
+            <key>PayloadUUID</key>
+            <string>87654321-4321-4321-4321-210987654322</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>PayloadEnabled</key>
+            <true/>
+            <key>PayloadContent</key>
+            <dict>
+                <key>com.networkprinter.preferences</key>
+                <dict>
+                    <key>Forced</key>
+                    <array>
+                        <dict>
+                            <key>mcx_preference_settings</key>
+                            <dict>
+                                <!-- Locked server configuration -->
+                                <key>PrintServerHost</key>
+                                <string>corpprint01.enterprise.local</string>
+                                <key>PrintServerPort</key>
+                                <integer>445</integer>
+                                <key>PrintServerDomain</key>
+                                <string>ENTERPRISE</string>
+                                
+                                <!-- Domain authentication -->
+                                <key>RequireAuthentication</key>
+                                <true/>
+                                <key>DefaultDomain</key>
+                                <string>ENTERPRISE</string>
+                                
+                                <!-- Strict user permissions -->
+                                <key>AllowUserServerChange</key>
+                                <false/>
+                                <key>AllowUserInstall</key>
+                                <true/>
+                                <key>AllowUserUninstall</key>
+                                <false/>
+                                
+                                <!-- No auto-install -->
+                                <key>AutoInstallPrinters</key>
+                                <false/>
+                                <!-- Empty: only configured-server SMB queues auto-install (never USB) -->
+                                <key>AutoInstallPrinterNames</key>
+                                <array/>
+                                <key>AutoInstallDefaultPrinter</key>
+                                <string></string>
+                                
+                                <!-- Controlled troubleshooting -->
+                                <key>EnableDetailedLogging</key>
+                                <false/>
+                                <key>AllowFallbackWithGenericSuggestion</key>
+                                <false/>
+                                
+                                <!-- Comprehensive driver mappings -->
+                                <key>PrinterDriverMappings</key>
+                                <dict>
+                                    <key>CORP-HP-4015-FL1</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz</string>
+                                    <key>CORP-CANON-5535-FL2</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz</string>
+                                    <key>CORP-XEROX-7835-FL3</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Xerox WorkCentre 7835.ppd.gz</string>
+                                    <key>CORP-BROTHER-L2350-FL4</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Brother HL-L2350DW.ppd.gz</string>
+                                    <key>CORP-RICOH-MP6503-FL5</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Ricoh MP 6503.ppd.gz</string>
+                                </dict>
+                                
+                                <!-- Google Sheets for dynamic updates -->
+                                <key>DriverMappingsURL</key>
+                                <string></string>
+                                <key>GoogleSheetsID</key>
+                                <string>YOUR_GOOGLE_SHEETS_ID</string>
+                                <key>GoogleSheetsAPIKey</key>
+                                <string>YOUR_GOOGLE_SHEETS_API_KEY</string>
+                                <key>GoogleSheetsRange</key>
+                                <string>PrinterDrivers!A:B</string>
+                            </dict>
+                        </dict>
+                    </array>
+                </dict>
+            </dict>
+        </dict>
+    </array>
 </dict>
+</plist>
 ```
 
-#### 🏭 Example 3: SMB-Only Legacy Environment
+**Key Features**:
+- Server settings locked (cannot be changed by users)
+- Users can install but not uninstall printers
+- Comprehensive driver mappings
+- Google Sheets integration for dynamic updates
+- Profile removal not allowed
+- No fallback to generic drivers
 
-**Scenario**: Traditional Windows-based print server environment
+---
+
+#### 🧑‍💻 Example 3: Kiosk/Lab Auto-Install
+
+**Scenario**: Computer labs or kiosks with automatic printer installation
 
 ```xml
-<key>mcx_preference_settings</key>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
 <dict>
-    <!-- SMB-Only Discovery -->
-    <key>DiscoveryMode</key>
-    <string>SMB</string>
-    
-    <!-- SMB Server Configuration -->
-    <key>PrintServerHost</key>
-    <string>legacy-printserver.company.local</string>
-    <key>PrintServerPort</key>
-    <integer>445</integer>
-    <key>PrintServerDomain</key>
-    <string>COMPANY</string>
-    
-    <!-- Authentication -->
-    <key>RequireAuthentication</key>
+    <key>PayloadDisplayName</key>
+    <string>Lab Auto-Install Printer Settings</string>
+    <key>PayloadIdentifier</key>
+    <string>com.university.lab.networkprinter.configuration</string>
+    <key>PayloadOrganization</key>
+    <string>University Computer Lab</string>
+    <key>PayloadRemovalDisallowed</key>
     <true/>
-    <key>DefaultDomain</key>
-    <string>COMPANY</string>
-    
-    <!-- Locked-down permissions -->
-    <key>AllowUserServerChange</key>
-    <false/>
-    <key>AllowUserInstall</key>
-    <true/>
-    <key>AllowUserUninstall</key>
-    <false/>
+    <key>PayloadScope</key>
+    <string>System</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>11111111-2222-3333-4444-555555555555</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadDescription</key>
+            <string>Auto-install lab printers</string>
+            <key>PayloadDisplayName</key>
+            <string>Lab Printer Auto-Install</string>
+            <key>PayloadIdentifier</key>
+            <string>com.networkprinter.preferences</string>
+            <key>PayloadOrganization</key>
+            <string>University Computer Lab</string>
+            <key>PayloadType</key>
+            <string>com.apple.ManagedClient.preferences</string>
+            <key>PayloadUUID</key>
+            <string>11111111-2222-3333-4444-555555555556</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>PayloadEnabled</key>
+            <true/>
+            <key>PayloadContent</key>
+            <dict>
+                <key>com.networkprinter.preferences</key>
+                <dict>
+                    <key>Forced</key>
+                    <array>
+                        <dict>
+                            <key>mcx_preference_settings</key>
+                            <dict>
+                                <!-- Lab server configuration -->
+                                <key>PrintServerHost</key>
+                                <string>labprint.university.edu</string>
+                                <key>PrintServerPort</key>
+                                <integer>445</integer>
+                                <key>PrintServerDomain</key>
+                                <string>UNIVERSITY</string>
+                                
+                                <!-- No authentication required -->
+                                <key>RequireAuthentication</key>
+                                <false/>
+                                <key>DefaultDomain</key>
+                                <string></string>
+                                
+                                <!-- No user control -->
+                                <key>AllowUserServerChange</key>
+                                <false/>
+                                <key>AllowUserInstall</key>
+                                <false/>
+                                <key>AllowUserUninstall</key>
+                                <false/>
+                                
+                                <!-- Full auto-install -->
+                                <key>AutoInstallPrinters</key>
+                                <true/>
+                                <!-- Empty: only configured-server SMB queues auto-install (never USB) -->
+                                <key>AutoInstallPrinterNames</key>
+                                <array/>
+                                <key>AutoInstallDefaultPrinter</key>
+                                <string>LAB-MAIN-PRINTER</string>
+                                
+                                <!-- Minimal logging -->
+                                <key>EnableDetailedLogging</key>
+                                <false/>
+                                <key>AllowFallbackWithGenericSuggestion</key>
+                                <true/>
+                                
+                                <!-- Lab printer mappings -->
+                                <key>PrinterDriverMappings</key>
+                                <dict>
+                                    <key>LAB-MAIN-PRINTER</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz</string>
+                                    <key>LAB-COLOR-PRINTER</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz</string>
+                                    <key>LAB-PLOTTER</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/HP DesignJet T730.ppd.gz</string>
+                                </dict>
+                                
+                                <!-- No remote management -->
+                                <key>DriverMappingsURL</key>
+                                <string></string>
+                                <key>GoogleSheetsID</key>
+                                <string></string>
+                                <key>GoogleSheetsAPIKey</key>
+                                <string></string>
+                                <key>GoogleSheetsRange</key>
+                                <string>printers!A:B</string>
+                            </dict>
+                        </dict>
+                    </array>
+                </dict>
+            </dict>
+        </dict>
+    </array>
 </dict>
+</plist>
 ```
 
-### 🔧 Advanced Configuration
+**Key Features**:
+- Automatic installation of all discovered printers
+- No user authentication required
+- Sets specific printer as default
+- Users cannot modify any settings
+- Minimal logging for performance
+- Profile removal not allowed
 
-| Key | Type | Description | Default | Protocols |
-|-----|------|-------------|---------|-----------|
-| `DiscoveryMode` | String | Discovery mode: "SMB", "IPP", or "Both" | `"Both"` | Both |
-| `PrintServerHost` | String | Hostname or IP address of SMB print server | `""` | SMB |
-| `PrintServerPort` | Integer | SMB port for print server connection | `445` | SMB |
-| `PrintServerDomain` | String | Domain name for SMB authentication | `""` | SMB |
-| `IPPServerHost` | String | Hostname or IP address of IPP print server | `""` | IPP |
-| `IPPServerPort` | Integer | IPP server port (631 for HTTP, 443 for HTTPS) | `631` | IPP |
-| `IPPUseSSL` | Boolean | Use HTTPS/TLS for secure IPP connections | `false` | IPP |
-| `IPPRequireAuthentication` | Boolean | Require authentication for IPP access | `true` | IPP |
-| `RequireAuthentication` | Boolean | Whether users must authenticate to access SMB printers | `false` | SMB |
-| `DefaultDomain` | String | Pre-fills domain field in authentication dialog | `""` | Both |
-| `AllowUserServerChange` | Boolean | Can users modify server settings | `true` | Both |
-| `AllowUserInstall` | Boolean | Can users install printers | `true` | Both |
-| `AllowUserUninstall` | Boolean | Can users remove installed printers | `true` | Both |
-| `AutoInstallPrinters` | Boolean | Silently install printers at launch (implemented, idempotent per session) | `false` | Both |
-| `AutoInstallPrinterNames` | Array | Names to auto-install (case-insensitive). Empty → only print-server-published queues | `[]` | Both |
-| `AutoInstallDefaultPrinter` | String | Set as system default if it matches an installed printer | `""` | Both |
-| `EnableDetailedLogging` | Boolean | Gates the detailed file log (errors always logged); output is credential-redacted | `false` | Both |
-| `AllowFallbackWithGenericSuggestion` | Boolean | Allow generic drivers when specific unavailable | `false` | Both |
+---
 
-### 🔧 Feature Implementation
-```swift
-// Multi-protocol printer discovery
-class PrinterManager: ObservableObject {
-    @Published var printers: [NetworkPrinter] = []
-    private let smbDiscoveryService = PrinterDiscoveryService()
-    private let ippDiscoveryService = IPPDiscoveryService()
-    
-    func discoverPrinters() {
-        let mode = preferencesManager.discoveryMode
-        
-        switch mode {
-        case .smb:
-            // SMB-only discovery
-            Task {
-                await discoverSMBPrinters()
-            }
-        case .ipp:
-            // IPP-only discovery
-            Task {
-                await discoverIPPPrinters()
-            }
-        case .both:
-            // Parallel discovery from both protocols
-            Task {
-                async let smbPrinters = discoverSMBPrinters()
-                async let ippPrinters = discoverIPPPrinters()
-                
-                let allPrinters = await smbPrinters + ippPrinters
-                await MainActor.run {
-                    self.printers = allPrinters
-                }
-            }
-        }
-    }
-    
-    private func discoverSMBPrinters() async -> [NetworkPrinter] {
-        // SMB discovery implementation
-    }
-    
-    private func discoverIPPPrinters() async -> [NetworkPrinter] {
-        // IPP discovery implementation using IPPDiscoveryService
-    }
+#### 🌐 Example 4: Remote JSON Driver Management
+
+**Scenario**: IT manages driver mappings via remote JSON endpoint
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadDisplayName</key>
+    <string>Remote Managed Printer Settings</string>
+    <key>PayloadIdentifier</key>
+    <string>com.techcorp.remote.networkprinter.configuration</string>
+    <key>PayloadOrganization</key>
+    <string>TechCorp</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadScope</key>
+    <string>System</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>99999999-8888-7777-6666-555555555555</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadDescription</key>
+            <string>Remote JSON driver management</string>
+            <key>PayloadDisplayName</key>
+            <string>Remote Printer Management</string>
+            <key>PayloadIdentifier</key>
+            <string>com.networkprinter.preferences</string>
+            <key>PayloadOrganization</key>
+            <string>TechCorp</string>
+            <key>PayloadType</key>
+            <string>com.apple.ManagedClient.preferences</string>
+            <key>PayloadUUID</key>
+            <string>99999999-8888-7777-6666-555555555556</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>PayloadEnabled</key>
+            <true/>
+            <key>PayloadContent</key>
+            <dict>
+                <key>com.networkprinter.preferences</key>
+                <dict>
+                    <key>Forced</key>
+                    <array>
+                        <dict>
+                            <key>mcx_preference_settings</key>
+                            <dict>
+                                <!-- Server configuration -->
+                                <key>PrintServerHost</key>
+                                <string>printserver.techcorp.com</string>
+                                <key>PrintServerPort</key>
+                                <integer>445</integer>
+                                <key>PrintServerDomain</key>
+                                <string>TECHCORP</string>
+                                
+                                <!-- Authentication -->
+                                <key>RequireAuthentication</key>
+                                <true/>
+                                <key>DefaultDomain</key>
+                                <string>TECHCORP</string>
+                                
+                                <!-- Balanced user permissions -->
+                                <key>AllowUserServerChange</key>
+                                <false/>
+                                <key>AllowUserInstall</key>
+                                <true/>
+                                <key>AllowUserUninstall</key>
+                                <true/>
+                                
+                                <!-- No auto-install -->
+                                <key>AutoInstallPrinters</key>
+                                <false/>
+                                <!-- Empty: only configured-server SMB queues auto-install (never USB) -->
+                                <key>AutoInstallPrinterNames</key>
+                                <array/>
+                                <key>AutoInstallDefaultPrinter</key>
+                                <string></string>
+                                
+                                <!-- Detailed logging for troubleshooting -->
+                                <key>EnableDetailedLogging</key>
+                                <true/>
+                                <key>AllowFallbackWithGenericSuggestion</key>
+                                <true/>
+                                
+                                <!-- Minimal local mappings (fallback) -->
+                                <key>PrinterDriverMappings</key>
+                                <dict>
+                                    <key>FALLBACK-GENERIC</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Generic PostScript Printer.ppd</string>
+                                </dict>
+                                
+                                <!-- Remote JSON management -->
+                                <key>DriverMappingsURL</key>
+                                <string>https://it.techcorp.com/printer-drivers/mappings.json</string>
+                                <key>GoogleSheetsID</key>
+                                <string></string>
+                                <key>GoogleSheetsAPIKey</key>
+                                <string></string>
+                                <key>GoogleSheetsRange</key>
+                                <string>printers!A:B</string>
+                            </dict>
+                        </dict>
+                    </array>
+                </dict>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
+```
+
+**Key Features**:
+- Remote JSON endpoint for driver mappings
+- Detailed logging enabled for troubleshooting
+- Fallback to generic drivers allowed
+- Local fallback mappings for offline scenarios
+- Users can install/uninstall but not change server
+
+**JSON Format Example** (`https://it.techcorp.com/printer-drivers/mappings.json`):
+```json
+{
+  "CORP-HP-4015-FL1": "/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz",
+  "CORP-CANON-5535-FL2": "/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz",
+  "CORP-XEROX-7835-FL3": "/Library/Printers/PPDs/Contents/Resources/Xerox WorkCentre 7835.ppd.gz",
+  "CORP-NEW-PRINTER": "/Library/Printers/PPDs/Contents/Resources/NewPrinter.ppd.gz"
 }
-
-// Unified driver mapping system
-class PreferencesManager: ObservableObject {
-    func getSuggestedDriverPath(for printerName: String) -> String? {
-        // Works for both SMB and IPP printer names
-        // Priority: MDM → Remote JSON → Google Sheets → Bundled
-        
-        // Try exact match first
-        if let exactMatch = printerDriverMappings[printerName] {
-            return exactMatch
-        }
-        
-        // Try fuzzy matching for both protocols
-        return findFuzzyMatch(for: printerName)
-    }
-}
-```
-
-### 🔧 Protocol-Specific Configuration
-
-#### SMB/CIFS Configuration
-```xml
-<!-- Traditional Windows print server -->
-<key>DiscoveryMode</key>
-<string>SMB</string>
-<key>PrintServerHost</key>
-<string>windows-printserver.domain.com</string>
-<key>PrintServerDomain</key>
-<string>DOMAIN</string>
-<key>RequireAuthentication</key>
-<true/>
-```
-
-#### IPP/IPPS Configuration
-```xml
-<!-- Modern CUPS or IPP server -->
-<key>DiscoveryMode</key>
-<string>IPP</string>
-<key>IPPServerHost</key>
-<string>cups.company.com</string>
-<key>IPPServerPort</key>
-<integer>631</integer>
-<key>IPPUseSSL</key>
-<false/>
-<key>IPPRequireAuthentication</key>
-<true/>
-```
-
-#### Mixed Environment Configuration
-```xml
-<!-- Support both protocols -->
-<key>DiscoveryMode</key>
-<string>Both</string>
-<key>PrintServerHost</key>
-<string>smb-server.company.com</string>
-<key>IPPServerHost</key>
-<string>ipp-server.company.com</string>
-<key>RequireAuthentication</key>
-<true/>
-<key>IPPRequireAuthentication</key>
-<true/>
 ```
 
 ---
@@ -477,73 +637,87 @@ uuidgen
 uuidgen
 ```
 
-#### Step 2: Choose Your Protocol Strategy
-**Decision Matrix:**
+#### Step 2: Customize Organization Details
+Replace these placeholders in your chosen example:
 
-| Environment | SMB Server | IPP Server | Discovery Mode | Best For |
-|-------------|------------|------------|----------------|----------|
-| **Traditional** | ✅ | ❌ | `SMB` | Windows-based environments |
-| **Modern** | ❌ | ✅ | `IPP` | CUPS/Linux-based environments |
-| **Mixed** | ✅ | ✅ | `Both` | Organizations in transition |
-| **Cloud** | ❌ | ✅ | `IPP` | Cloud-native printing solutions |
+- `PayloadOrganization`: Your organization name
+- `PayloadIdentifier`: Your unique identifier (e.g., `com.yourcompany.networkprinter`)
+- `PayloadDisplayName`: Descriptive name for the profile
 
 #### Step 3: Configure Server Settings
-Set your print server details based on chosen protocols:
-
-**For SMB environments:**
+Set your print server details:
 ```xml
-<key>DiscoveryMode</key>
-<string>SMB</string>
 <key>PrintServerHost</key>
-<string>your-smb-server.domain.com</string>
+<string>your-print-server.domain.com</string>
 <key>PrintServerPort</key>
 <integer>445</integer>
 <key>PrintServerDomain</key>
 <string>YOUR-DOMAIN</string>
 ```
 
-**For IPP environments:**
+#### Step 4: Set User Permissions
+Choose appropriate permissions for your environment:
 ```xml
-<key>DiscoveryMode</key>
-<string>IPP</string>
-<key>IPPServerHost</key>
-<string>your-ipp-server.domain.com</string>
-<key>IPPServerPort</key>
-<integer>631</integer>
-<key>IPPUseSSL</key>
+<!-- Locked down -->
+<key>AllowUserServerChange</key>
 <false/>
-<key>IPPRequireAuthentication</key>
+<key>AllowUserInstall</key>
+<true/>
+<key>AllowUserUninstall</key>
+<false/>
+
+<!-- Flexible -->
+<key>AllowUserServerChange</key>
+<true/>
+<key>AllowUserInstall</key>
+<true/>
+<key>AllowUserUninstall</key>
 <true/>
 ```
 
-**For mixed environments:**
-```xml
-<key>DiscoveryMode</key>
-<string>Both</string>
-<!-- Configure both SMB and IPP settings -->
-```
+#### Step 5: Configure Driver Mappings
+Choose your driver management strategy:
 
-#### Step 4: Configure Driver Mappings
-The same driver mapping system works for both protocols:
-
+**Option A: Static mappings in profile**
 ```xml
 <key>PrinterDriverMappings</key>
 <dict>
-    <!-- SMB printer names -->
-    <key>CORP-HP-4015-FL1</key>
-    <string>/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz</string>
-    
-    <!-- IPP printer names -->
-    <key>Office-Printer-Main</key>
-    <string>/Library/Printers/PPDs/Contents/Resources/HP Color LaserJet.ppd.gz</string>
-    
-    <!-- Generic mappings work for both -->
-    <key>Reception-Printer</key>
-    <string>/Library/Printers/PPDs/Contents/Resources/Canon Color ImageCLASS.ppd.gz</string>
+    <key>PRINTER-NAME</key>
+    <string>/Library/Printers/PPDs/Contents/Resources/Driver.ppd.gz</string>
 </dict>
 ```
 
-#### Step 5: Deploy Profile
+**Option B: Remote JSON**
+```xml
+<key>DriverMappingsURL</key>
+<string>https://your-domain.com/printer-drivers.json</string>
+```
+
+**Option C: Google Sheets**
+```xml
+<key>GoogleSheetsID</key>
+<string>YOUR-GOOGLE-SHEET-ID</string>
+<key>GoogleSheetsAPIKey</key>
+<string>YOUR-API-KEY</string>
+<key>GoogleSheetsRange</key>
+<string>printers!A:B</string>
+```
+
+#### Step 6: Set Installation Behavior
+Configure how printers are installed:
+```xml
+<!-- Manual installation -->
+<key>AutoInstallPrinters</key>
+<false/>
+
+<!-- Automatic installation -->
+<key>AutoInstallPrinters</key>
+<true/>
+<key>AutoInstallDefaultPrinter</key>
+<string>MAIN-OFFICE-PRINTER</string>
+```
+
+#### Step 7: Deploy Profile
 Deploy using your MDM or manually:
 ```bash
 # Manual deployment
@@ -552,181 +726,177 @@ sudo profiles -I -F YourNetworkPrinterSettings.mobileconfig
 # Verify deployment
 profiles -P | grep networkprinter
 
-# Check settings (both protocols)
-defaults read com.networkprinter.preferences DiscoveryMode
-defaults read com.networkprinter.preferences PrintServerHost
-defaults read com.networkprinter.preferences IPPServerHost
+# Check settings
+defaults read com.networkprinter.preferences
 ```
 
 ---
 
 ### 🎯 Configuration Decision Matrix
 
-| Requirement | Small Business | Enterprise | Kiosk/Lab | Remote Managed | Mixed Environment |
-|-------------|---------------|------------|-----------|----------------|-------------------|
-| **Protocols supported** | SMB or IPP | Both | Both | Both | Both |
-| **User can change server** | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **User can install printers** | ✅ | ✅ | ❌ | ✅ | ✅ |
-| **User can uninstall printers** | ✅ | ❌ | ❌ | ✅ | ✅ |
-| **Auto-install all printers** | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **Authentication required** | ✅ | ✅ | ❌ | ✅ | ✅ |
-| **Detailed logging** | ❌ | ❌ | ❌ | ✅ | ❌ |
-| **Profile removal allowed** | ✅ | ❌ | ❌ | ✅ | ✅ |
-| **Driver management** | Static | Static + Sheets | Static | Remote JSON | Remote + Static |
-| **Fallback drivers** | ✅ | ❌ | ✅ | ✅ | ✅ |
-| **Discovery mode** | Single | Both | Both | Both | Both |
+| Requirement | Small Business | Enterprise | Kiosk/Lab | Remote Managed |
+|-------------|---------------|------------|-----------|----------------|
+| **User can change server** | ✅ | ❌ | ❌ | ❌ |
+| **User can install printers** | ✅ | ✅ | ❌ | ✅ |
+| **User can uninstall printers** | ✅ | ❌ | ❌ | ✅ |
+| **Auto-install all printers** | ❌ | ❌ | ✅ | ❌ |
+| **Authentication required** | ✅ | ✅ | ❌ | ✅ |
+| **Detailed logging** | ❌ | ❌ | ❌ | ✅ |
+| **Profile removal allowed** | ✅ | ❌ | ❌ | ✅ |
+| **Driver management** | Static | Static + Sheets | Static | Remote JSON |
+| **Fallback drivers** | ✅ | ❌ | ✅ | ✅ |
 
 ### 🔧 Common Use Cases
 
-#### 🏢 Use Case 1: Mixed Protocol Environment
+#### 🏢 Use Case 1: Small Business
 
-* 500+ users, Windows domain + CUPS servers, both SMB and IPP support
+* 50 employees, one print server, user authentication allowed
 
-#### 🌐 Use Case 2: Cloud-Native IPP
+#### 🏭 Use Case 2: Enterprise Control
 
-* Modern organization, CUPS-based cloud printing, IPP-only
+* 500+ users, predefined drivers, no user changes allowed
 
-#### 🏭 Use Case 3: Legacy SMB Migration
+#### 🧑‍💻 Use Case 3: Lab/Kiosk
 
-* Transitioning from Windows print servers to IPP, temporary both protocols
+* Auto-install, no user interaction
 
-#### 🤝 Use Case 4: Hybrid Management
+#### 🌐 Use Case 4: Remote Driver Management
 
-* Static mappings for core printers, remote JSON for dynamic updates, support both protocols
+* Use remote JSON or Google Sheets to manage driver mappings
 
 ---
 
 ## 🔑 Configuration Key Reference
 
-### Multi-Protocol Discovery
+### Server Configuration
 
-| Key                 | Type    | Description                 | Protocols |
-| ------------------- | ------- | --------------------------- | --------- |
-| `DiscoveryMode`     | String  | "SMB", "IPP", or "Both"     | Both      |
-| `PrintServerHost`   | String  | Hostname/IP of SMB server   | SMB       |
-| `PrintServerPort`   | Integer | SMB port (default: 445)     | SMB       |
-| `PrintServerDomain` | String  | Auth domain for SMB         | SMB       |
-| `IPPServerHost`     | String  | Hostname/IP of IPP server   | IPP       |
-| `IPPServerPort`     | Integer | IPP port (default: 631) — **enforced**: drives the real `ipp(s)://host:port` target | IPP       |
-| `IPPUseSSL`         | Boolean | Use IPPS (SSL/TLS) — **enforced**: selects `ipps://` and the SSL port | IPP       |
+| Key                 | Type    | Description                 |
+| ------------------- | ------- | --------------------------- |
+| `PrintServerHost`   | String  | Hostname/IP of print server |
+| `PrintServerPort`   | Integer | SMB port (default: 445)     |
+| `PrintServerDomain` | String  | Auth domain for SMB         |
 
 ### Authentication
 
-| Key                     | Type    | Description            | Protocols |
-| ----------------------- | ------- | ---------------------- | --------- |
-| `RequireAuthentication` | Boolean | **Enforced** — gates the login prompt for SMB creds | SMB       |
-| `IPPRequireAuthentication` | Boolean | Prompt for IPP creds | IPP       |
-| `DefaultDomain`         | String  | Default domain prefill | Both      |
+| Key                     | Type    | Description            |
+| ----------------------- | ------- | ---------------------- |
+| `RequireAuthentication` | Boolean | Prompt for user creds  |
+| `DefaultDomain`         | String  | Default domain prefill |
 
 ### 🔐 Domain Configuration & Authentication
 
-The application supports comprehensive domain configuration to streamline user authentication across both protocols:
+The application supports comprehensive domain configuration to streamline user authentication:
 
 #### Domain Settings Overview
 
-| Setting | Purpose | User Experience | Protocols |
-|---------|---------|-----------------|-----------|
-| `PrintServerDomain` | Server's domain for SMB connections | Used internally for SMB communication | SMB |
-| `DefaultDomain` | Pre-fills authentication dialog | Users see this value in domain field | Both |
-| `IPPRequireAuthentication` | Controls IPP authentication | Shows/hides IPP login dialog | IPP |
+| Setting | Purpose | User Experience |
+|---------|---------|-----------------|
+| `PrintServerDomain` | Server's domain for SMB connections | Used internally for server communication |
+| `DefaultDomain` | Pre-fills authentication dialog | Users see this value in the domain field |
 
-#### Multi-Protocol Authentication Flow
+#### Authentication Flow
 
-1. **Discovery mode determines** which protocols are used
-2. **For SMB printers**: Uses `RequireAuthentication` and `DefaultDomain`
-3. **For IPP printers**: Uses `IPPRequireAuthentication` setting
-4. **Mixed environments**: May require authentication for both protocols
-5. **Domain validation** occurs before attempting printer discovery
+1. **When authentication is required**, the app presents a login dialog
+2. **Domain field is automatically pre-filled** with the `DefaultDomain` value
+3. **Users can modify the domain** unless the setting is managed by MDM
+4. **Domain validation** occurs before attempting printer discovery
 
 #### Configuration Examples
 
-**Example 1: Mixed Environment Authentication**
+**Example 1: Corporate Domain**
 ```xml
-<key>DiscoveryMode</key>
-<string>Both</string>
 <key>PrintServerDomain</key>
+<string>CORP</string>
+<key>DefaultDomain</key>
 <string>CORP</string>
 <key>RequireAuthentication</key>
 <true/>
-<key>IPPRequireAuthentication</key>
-<true/>
-<key>DefaultDomain</key>
-<string>CORP</string>
 ```
 
-**Example 2: IPP-Only with Authentication**
+**Example 2: Active Directory Domain**
 ```xml
-<key>DiscoveryMode</key>
-<string>IPP</string>
-<key>IPPRequireAuthentication</key>
-<true/>
-<key>DefaultDomain</key>
-<string>COMPANY</string>
-```
-
-**Example 3: SMB-Only Traditional Setup**
-```xml
-<key>DiscoveryMode</key>
-<string>SMB</string>
 <key>PrintServerDomain</key>
-<string>DOMAIN.LOCAL</string>
+<string>ACME.LOCAL</string>
+<key>DefaultDomain</key>
+<string>ACME</string>
 <key>RequireAuthentication</key>
 <true/>
+```
+
+**Example 3: No Authentication Required**
+```xml
+<key>PrintServerDomain</key>
+<string></string>
 <key>DefaultDomain</key>
-<string>DOMAIN</string>
+<string></string>
+<key>RequireAuthentication</key>
+<false/>
 ```
 
 #### User Experience Benefits
 
-- **Protocol awareness**: Users understand which servers require authentication
-- **Reduced friction**: Pre-configured domains reduce typing
-- **Consistent experience**: Same authentication flow regardless of protocol
-- **Error prevention**: Pre-configured domains prevent authentication failures
-- **MDM control**: IT can lock authentication settings to prevent user changes
+- **Reduced friction**: Users don't need to remember domain names
+- **Consistent authentication**: Same domain used across all printer operations
+- **Error prevention**: Pre-configured domains reduce authentication failures
+- **MDM control**: IT can lock domain settings to prevent user changes
 
-#### Common Multi-Protocol Configurations
+#### Common Domain Configurations
 
-| Scenario | DiscoveryMode | SMB Auth | IPP Auth | Notes |
-|----------|---------------|----------|----------|-------|
-| Windows + CUPS | `Both` | `true` | `true` | Both protocols need auth |
-| Public IPP | `IPP` | N/A | `false` | Open IPP server |
-| Secure Mixed | `Both` | `true` | `true` | All printers require auth |
-| Legacy Only | `SMB` | `true` | N/A | Traditional Windows domain |
+| Scenario | PrintServerDomain | DefaultDomain | Notes |
+|----------|-------------------|---------------|-------|
+| Windows domain | `DOMAIN` | `DOMAIN` | Typical AD setup |
+| FQDN domain | `company.local` | `company` | Often shorter for user entry |
+| Workgroup | `WORKGROUP` | `WORKGROUP` | Local network setup |
+| No domain | `""` | `""` | Anonymous access |
+
+#### Domain Authentication Troubleshooting
+
+**Common Issues:**
+- **Domain not found**: Verify `PrintServerDomain` matches your network configuration
+- **Authentication failures**: Check that `DefaultDomain` is correct for your environment
+- **User confusion**: Use shorter domain names in `DefaultDomain` for better UX
+
+**Testing Domain Configuration:**
+```bash
+# Check configured domain
+defaults read com.networkprinter.preferences DefaultDomain
+
+# Test SMB connection with domain
+smbutil view -I 192.168.1.100 -W DOMAIN //username@server
+```
 
 ### Installation
 
-| Key                                  | Type    | Description                      | Protocols |
-| ------------------------------------ | ------- | -------------------------------- | --------- |
-| `AutoInstallPrinters`                | Boolean | **Implemented** — silently install printers at launch (idempotent per session). Behavior depends on `AutoInstallPrinterNames` (see below) | Both      |
-| `AutoInstallPrinterNames`            | Array   | Names of printers to auto-install (case-insensitive). **Non-empty** → only these named printers are installed. **Empty** → only printers published by the configured print server(s) are installed — never ad-hoc mDNS/AirPrint discoveries, never USB | Both      |
-| `AutoInstallDefaultPrinter`          | String  | **Implemented** — if it matches an installed printer, it is set as the system default | Both      |
-| `AllowFallbackWithGenericSuggestion` | Boolean | Allow generic driver fallback    | Both      |
+| Key                                  | Type    | Description                      |
+| ------------------------------------ | ------- | -------------------------------- |
+| `AutoInstallPrinters`                | Boolean | Enable auto-install of printers  |
+| `AutoInstallPrinterNames`            | Array   | Names to auto-install; empty = configured-server SMB queues only (never USB) |
+| `AutoInstallDefaultPrinter`          | String  | Printer to set as default        |
+| `AllowFallbackWithGenericSuggestion` | Boolean | Allow generic driver fallback    |
 
 ### User Permissions
 
-All permission keys below are **enforced**: the corresponding actions are hidden in the UI *and* guarded inside `PrinterManager` (a blocked action throws a "not permitted" error).
+| Key                     | Type    | Description                    |
+| ----------------------- | ------- | ------------------------------ |
+| `AllowUserServerChange` | Boolean | Let user modify server field   |
+| `AllowUserInstall`      | Boolean | Enable user-initiated installs |
+| `AllowUserUninstall`    | Boolean | Allow user to remove printers  |
 
-| Key                     | Type    | Description                    | Protocols |
-| ----------------------- | ------- | ------------------------------ | --------- |
-| `AllowUserServerChange` | Boolean | **Enforced** — lets a non-admin edit the server fields when policy allows | Both      |
-| `AllowUserInstall`      | Boolean | **Enforced** — hides and guards user-initiated installs | Both      |
-| `AllowUserUninstall`    | Boolean | **Enforced** — hides and guards printer removal | Both      |
+### Driver Management
 
-### Driver Management (Protocol Agnostic)
-
-| Key                     | Type       | Description                  | Protocols |
-| ----------------------- | ---------- | ---------------------------- | --------- |
-| `PrinterDriverMappings` | Dictionary | Printer name → path to PPD   | Both      |
-| `DriverMappingsURL`     | String     | Remote JSON with driver info | Both      |
-| `GoogleSheetsID`        | String     | Google Sheets spreadsheet ID | Both      |
-| `GoogleSheetsAPIKey`    | String     | API Key for Sheet access     | Both      |
-| `GoogleSheetsRange`     | String     | Range (e.g., `printers!A:B`) | Both      |
+| Key                     | Type       | Description                  |
+| ----------------------- | ---------- | ---------------------------- |
+| `PrinterDriverMappings` | Dictionary | Printer name → path to PPD   |
+| `DriverMappingsURL`     | String     | Remote JSON with driver info |
+| `GoogleSheetsID`        | String     | Google Sheet for mapping     |
+| `GoogleSheetsAPIKey`    | String     | API Key for Sheet access     |
+| `GoogleSheetsRange`     | String     | Range (e.g., `printers!A:B`) |
 
 ### Advanced
 
-| Key                     | Type    | Description               | Protocols |
-| ----------------------- | ------- | ------------------------- | --------- |
-| `EnableDetailedLogging` | Boolean | **Gates the detailed file log.** Error/fault lines are always written; info/debug lines are written only when this is `true` (default `false`). Enable it to capture a full troubleshooting log. All log output is credential-redacted | Both      |
+| Key                     | Type    | Description               |
+| ----------------------- | ------- | ------------------------- |
+| `EnableDetailedLogging` | Boolean | Enables detailed app logs |
 
 ---
 
@@ -737,8 +907,7 @@ All permission keys below are **enforced**: the corresponding actions are hidden
 1. Create or edit a Configuration Profile
 2. Use "Application & Custom Settings"
 3. Upload your `.mobileconfig`
-4. Configure discovery mode and both SMB/IPP settings as needed
-5. Assign to desired scope and deploy
+4. Assign to desired scope and deploy
 
 ### Microsoft Intune
 
@@ -755,72 +924,21 @@ sudo profiles -I -F NetworkPrinterSettings.mobileconfig
 To check settings:
 
 ```bash
-# Check discovery mode and servers
-defaults read com.networkprinter.preferences DiscoveryMode
 defaults read com.networkprinter.preferences PrintServerHost
-defaults read com.networkprinter.preferences IPPServerHost
 ```
-
-### 🧑‍💻 Standard-User Installs (Privileged Helper)
-
-By default, installing or removing printers requires admin rights. To let **standard (non-admin)** users install and remove printers, the app ships an optional bundled **SMAppService LaunchDaemon** (`PrinterInstallHelper`, daemon identifier `com.ayala.solutions.NetworkPrinter.installhelper`) with a strict, code-signing-pinned XPC interface; when it is enabled the app routes `lpadmin` through it, otherwise it uses `lpadmin` directly (admins need no setup).
-
-Deployment facts to be aware of:
-
-* The helper **only works in a properly signed & notarized build.** The helper tool embeds an `Info.plist` so its signed identity matches the app's code-signing requirement (without it, every XPC connection is rejected).
-* It must be **approved once** — either by the user in **System Settings → General → Login Items**, or **pre-approved via MDM** (a managed-login-items / privileged-helper payload).
-* **Admins** install directly and are unaffected whether or not the helper is enabled. A **standard user** whose helper isn't yet approved gets an actionable *"open Login Items"* message rather than a silent failure. XPC calls are bounded by a timeout so an unreachable helper can't hang the UI.
-* Server-side, the daemon builds the `lpadmin` arguments itself from validated pieces (printer name, device-URI scheme, and a driver confirmed against its own `lpinfo -m` inventory — driverless `everywhere` included) and stages PPD files into a root-owned temporary file. It never accepts raw arguments or credentials.
-
----
-
-## 🔄 Updating the App
-
-Fleet updates are distributed through MDM (Jamf Pro / Intune) as versioned, signed PKGs — build a new PKG for each release, bump the version, and push it through your MDM's normal software-update workflow. The app deliberately ships **without** an in-app updater (e.g. Sparkle): on managed fleets the MDM owns the update channel, which keeps versions consistent across the fleet and avoids updates that bypass IT review.
-
----
-
-## 🧱 Building & Testing
-
-* **Optimized Release builds**: Release configuration builds with `-O` and whole-module optimization.
-* **Signing**: `build_and_notarize.sh` takes its signing identity from the `DEVELOPER_ID` environment variable, notarizes via a `notarytool` keychain profile (`NOTARY_PROFILE`), and signs inside-out (helper and daemon first, app last) for a properly signed & notarized bundle.
-* **CI**: A GitHub Actions workflow builds the project and runs the unit tests on every push and pull request.
-* **Unit tests (~100)**: Cover the parsers, credential redaction, `ProcessRunner`, CIDR expansion, the auto-install allowlist policy, Kerberos parsing, helper input validation, driver matching, discovery-mode server usage, and `ippfind` exit-status interpretation.
 
 ---
 
 ## 🧰 Logging
 
-### 🔒 Redaction & Gating
-
-* **Credential-redacted**: before anything is written to OSLog or the file log, credentials are stripped — URI `user:pass@` forms, `smbutil //DOMAIN;user:pass` specs, `-w`/`--password` values, `PASSWD`-style env names, and Google API keys.
-* **`EnableDetailedLogging` gates the detailed file log**: error/fault lines are **always** written, but info/debug lines are written only when `EnableDetailedLogging` is `true` (default `false`). To capture a full troubleshooting file log, enable `EnableDetailedLogging` first.
-
 ### 📄 File Logs
 
 * Location: `~/Library/Application Support/com.slc.NetworkPrinter/Logs/NetworkPrinter_debug.log`
-* Logs contain timestamps, log levels, protocol information, and operation details
+* Logs contain timestamps, log levels, operation info
 
 ### 🖥️ Console Logs
 
 * Use Console.app → filter by `com.slc.NetworkPrinter` or `cfprefsd`
-* Protocol-specific filtering available:
-  * SMB: Search for "PrinterDiscoveryService" or "SMB"
-  * IPP: Search for "IPPDiscoveryService" or "IPP"
-
-### Enhanced Logging Commands
-
-```bash
-# View live logs for both protocols
-log stream --predicate 'subsystem == "com.slc.NetworkPrinter"' --level debug
-
-# Protocol-specific logging
-log stream --predicate 'subsystem == "com.slc.NetworkPrinter" and category == "PrinterDiscoveryService"' --level debug
-log stream --predicate 'subsystem == "com.slc.NetworkPrinter" and category == "IPPDiscoveryService"' --level debug
-
-# View recent multi-protocol activity
-log show --predicate 'subsystem == "com.slc.NetworkPrinter"' --last 1h
-```
 
 ---
 
@@ -836,207 +954,336 @@ log show --predicate 'subsystem == "com.slc.NetworkPrinter"' --last 1h
 profiles -C -v | grep networkprinter
 ```
 
-### Multi-Protocol Discovery Issues
+### No Printers Found
 
-* **Only SMB printers found**: Check `IPPServerHost` configuration and IPP server connectivity
-* **Only IPP printers found**: Check `PrintServerHost` configuration and SMB server connectivity  
-* **No printers found**: Verify `DiscoveryMode` is set correctly and both servers are accessible
-* **Local Network permission**: on first discovery, macOS asks *"NetworkPrinter would like to find and connect to devices on your local network"* — AirPrint / IPP Everywhere / mDNS discovery finds nothing until this is allowed. Check **System Settings → Privacy & Security → Local Network** if the app isn't listed or was denied.
-* **Printer on another VLAN**: Bonjour/mDNS does not cross VLANs. Either enable mDNS reflection on the gateway (e.g. UniFi's *Multicast DNS*), add the printer's subnet under **Settings → Cross-VLAN Discovery**, or configure the print server address directly.
-
-```bash
-# Test SMB connectivity
-smbutil view //username:password@smb-server
-
-# Test IPP connectivity  
-ippfind -T 5
-
-# Is anything on this segment advertising print services at all?
-dns-sd -B _ipp._tcp local.
-
-# Check discovery mode
-defaults read com.networkprinter.preferences DiscoveryMode
-```
-
-Note: `ippfind` exits `1` when it simply finds no printers — the app reports that
-as zero results, not an error.
+* **Local Network permission**: on first discovery, macOS asks *"NetworkPrinter would like to find and connect to devices on your local network"* — a print server on the local subnet is unreachable until this is allowed. Check **System Settings → Privacy & Security → Local Network** if the app isn't listed or was denied.
+* **Server on another VLAN/subnet**: verify `PrintServerHost` resolves and that routing/firewall rules allow SMB (port 445) from client VLANs to the print server.
+* **Printer names show hyphens instead of spaces** (e.g. `Front-Office-HP`): CUPS queue names cannot contain spaces or most punctuation — the app sanitizes names automatically.
 
 ### Driver Mapping Failures
 
-* Check PPD paths work for both SMB and IPP printers
+* Check PPD paths
 * Enable `EnableDetailedLogging` in preferences
 * Verify PPDs in `/Library/Printers/PPDs/Contents/Resources/`
-* Test with both SMB and IPP printer names
 
-### Protocol-Specific Authentication Issues
+### Domain Authentication Issues
 
-* **SMB Authentication**: Verify `PrintServerDomain` and `DefaultDomain` match your AD
-* **IPP Authentication**: Check `IPPRequireAuthentication` setting
-* **Mixed Environment**: Ensure both protocol credentials are configured
+* **Domain not found**: Verify `PrintServerDomain` matches your network configuration
+* **Authentication failures**: Check that `DefaultDomain` is correct for your environment
+* **User confusion**: Use shorter domain names in `DefaultDomain` for better UX
 
-#### Testing Protocol Configuration:
+#### Testing Domain Configuration:
 
 ```bash
-# Check SMB configuration
-defaults read com.networkprinter.preferences PrintServerHost
-defaults read com.networkprinter.preferences PrintServerDomain
-
-# Check IPP configuration
-defaults read com.networkprinter.preferences IPPServerHost
-defaults read com.networkprinter.preferences IPPRequireAuthentication
+# Check configured domain
+defaults read com.networkprinter.preferences DefaultDomain
 
 # Test SMB connection with domain
 smbutil view -I 192.168.1.100 -W DOMAIN //username@server
-
-# Test IPP connection
-ippfind -T 5 -x echo "Found: {service_uri}" \;
 ```
+
+---
+
+## 🔄 Building the Project
+
+1. Open `NetworkPrinter.xcodeproj`
+2. Select scheme `NetworkPrinter`
+3. Run on `My Mac`
+
+---
+
+## 📌 Recent Updates
+
+See **[CHANGELOG.md](./CHANGELOG.md)** for the full list. Highlights of the latest overhaul:
+
+### 🧠 Hybrid Driver Detection
+
+* Mapping wins; unmapped SMB printers auto-resolve via share-comment model parsing + fuzzy `lpinfo -m` matching
+* SNMP only against a real printer IP; generic + manual picker as last resort
+* Mapping is now **fallback-optional**; supports `.ppd`, `.gz`, and `.ppd.gz`
+
+### 🎫 Authentication
+
+* Kerberos / SSO: passwordless SMB browse + install (`auth-info-required=negotiate`) when a ticket exists
+* Reused Keychain domain credentials; standard-user installs via the `SMAppService` privileged helper
+
+### 🛡️ Policy & Install
+
+* Enforced `AllowUserInstall` / `AllowUserUninstall` / `AllowUserServerChange` / `RequireAuthentication`
+* Working auto-install with `AutoInstallPrinterNames` scoping (empty = configured-server SMB only, never USB)
+* Concurrent, de-duplicated discovery with truthful success/error reporting
+
+### 🔐 Logging & Credentials
+
+* `EnableDetailedLogging`-gated file logging (errors always written)
+* Credential-redacted logs; passwords never in process arguments or device URIs
 
 ---
 
 ## 🔮 Future Roadmap
 
-* Enhanced protocol support (LPR, Google Cloud Print successor)
-* Advanced mixed-environment management tools
-* Real-time cross-protocol printer job queue visibility
-* Cloud-based printer management integration
+* Sort/filter by location or queue type
+* Config export/import
+* Deeper MDM integrations
+* Real-time printer job queue visibility
 
-> Hybrid driver auto-detection, Kerberos/SSO, standard-user installs via the privileged helper, enforced MDM policy, working auto-install, and redacted/gated logging have all **shipped** — see the Features and Architecture sections above.
-
----
-
-## 🌟 Additional Features
-
-### 🌈 Protocol-Aware UI
-
-The app's UI adapts to show protocol-specific information, with clear indicators for SMB vs IPP printers and their respective connection methods.
-
-### 🚀 Advanced Multi-Protocol Deployment Options
-
-Support for complex mixed environments with automated deployment via MDM and custom scripts that handle both SMB and IPP configurations.
-
-### 📈 Performance Enhancements
-
-Discovery is fully concurrent: independent sources (SMB, IPP server, local mDNS/AirPrint, IPP Everywhere, USB) and the individual mDNS service types run in parallel and are de-duplicated centrally, and installation status is checked with a single bulk `lpstat -p` rather than one process per printer. A refresh completes before the UI reports success, and when every source fails the app surfaces a real error instead of an empty list.
-
-### 📊 Security Enhancements
-
-Credentials are never placed in process arguments — the `security` keychain calls receive the command on **stdin**, and `ipptool` gets its password via the `CUPS_PASSWORD` environment variable — and are never embedded in persisted CUPS device URIs. Validated domain credentials are stored in the Keychain and reused on next launch (subject to `RequireAuthentication` and Kerberos), so users are not re-prompted every launch. All log output is credential-redacted, and IPPS provides encrypted communication.
+> Note: IPP/AirPrint support is intentionally **out of scope** — this app is SMB/CIFS + USB only.
 
 ---
 
-## 🏗️ Enhanced Architecture
+🧾 For advanced driver mapping (Google Sheets / JSON), see:
+**[NetworkPrinter_Driver_Mapping_Guide.md](./NetworkPrinter_Driver_Mapping_Guide.md)**
 
-The app's enhanced architecture supports multiple sources and protocols seamlessly:
+📂 Profile editor schema: `com.networkprinter.preferences.plist` – compatible with tools like iMazing and ProfileCreator
 
-* **PrinterManager**: Orchestrates concurrent discovery and enforces MDM permission policy
-* **PreferencesManager**: Manages unified configuration for both protocols
-* **ProcessRunner**: Single async runner for all subprocess calls (timeouts, concurrent stdout/stderr draining, child termination on cancel)
-* **PrinterDiscoveryService**: Handles SMB/CIFS printer discovery and validation
-* **IPPDiscoveryService**: Dedicated IPP/IPPS/AirPrint printer discovery and management
-* **DriverMatching** (`ModelExtractor` + `DriverMatcher`): Hybrid driver resolution against `lpinfo -m`
-* **KerberosService**: Ticket detection and the password-free SSO/negotiate install path
-* **HelperClient + PrinterInstallHelper daemon**: Signed SMAppService LaunchDaemon that enables standard-user installs
-* **PrinterInstallationService**: Unified installation service (direct or via the helper)
-* **PrinterStatusService / KeychainService / FileLogging**: Bulk status, credential storage, redacted/gated logging
-* **UI Components**: Protocol-aware views with visual indicators for printer types
-* **Unified Driver System**: IT mappings plus hybrid detection across all protocols
+---
+
+📣 *Maintain and evolve with community support and enterprise feedback.*
 
 ---
 
 ## 📊 Complete Configuration Keys Reference Chart
 
-### 🎯 Enhanced Configuration Keys Overview
+### 🎯 Configuration Keys Overview
 
-This comprehensive chart explains every available configuration key for both SMB and IPP protocols:
+This comprehensive chart explains every available configuration key, its purpose, default values, and impact on user experience.
 
-| Category | Key | Type | Default | Description | User Impact | Protocols | MDM Manageable |
-|----------|-----|------|---------|-------------|-------------|-----------|----------------|
-| **🔍 Discovery** | `DiscoveryMode` | String | `"Both"` | Discovery mode: "SMB", "IPP", or "Both" | Controls which protocols are used | Both | ✅ |
-| **🖥️ SMB Server** | `PrintServerHost` | String | `""` | Hostname or IP address of SMB print server | Required for SMB printer discovery | SMB | ✅ |
-| **🖥️ SMB Server** | `PrintServerPort` | Integer | `445` | SMB port for print server connection | Usually 445 for SMB/CIFS | SMB | ✅ |
-| **🖥️ SMB Server** | `PrintServerDomain` | String | `""` | Domain name for SMB authentication | Used internally for server communication | SMB | ✅ |
-| **🌐 IPP Server** | `IPPServerHost` | String | `""` | Hostname or IP address of IPP print server | Required for IPP printer discovery | IPP | ✅ |
-| **🌐 IPP Server** | `IPPServerPort` | Integer | `631` | IPP server port (631 for HTTP, 443 for HTTPS) — **enforced** in the `ipp(s)://host:port` target | Standard IPP ports | IPP | ✅ |
-| **🌐 IPP Server** | `IPPUseSSL` | Boolean | `false` | Use HTTPS/TLS for secure IPP connections — **enforced** (selects `ipps://`) | Enables encrypted communication | IPP | ✅ |
-| **🌐 IPP Server** | `IPPRequireAuthentication` | Boolean | `true` | Require authentication for IPP access | Shows/hides IPP login dialog | IPP | ✅ |
-| **🔐 Auth** | `RequireAuthentication` | Boolean | `false` | **Enforced** — gates the SMB login prompt | Shows/hides SMB login dialog | SMB | ✅ |
-| **🔐 Auth** | `DefaultDomain` | String | `""` | Pre-fills domain field in authentication dialog | Reduces user typing, improves UX | Both | ✅ |
-| **👤 Permissions** | `AllowUserServerChange` | Boolean | `true` | **Enforced** — lets a non-admin edit server fields when allowed | Shows/hides server configuration UI | Both | ✅ |
-| **👤 Permissions** | `AllowUserInstall` | Boolean | `true` | **Enforced** — hides *and* guards installs (blocked action throws) | Shows/hides install buttons | Both | ✅ |
-| **👤 Permissions** | `AllowUserUninstall` | Boolean | `true` | **Enforced** — hides *and* guards removal (blocked action throws) | Shows/hides uninstall buttons | Both | ✅ |
-| **🤖 Auto-Install** | `AutoInstallPrinters` | Boolean | `false` | **Implemented** — silently install at launch, idempotent per session | Installs without user interaction | Both | ✅ |
-| **🤖 Auto-Install** | `AutoInstallPrinterNames` | Array | `[]` | Names to auto-install (case-insensitive). Non-empty → only these; empty → only print-server-published queues (never ad-hoc mDNS/AirPrint, never USB) | Scopes what auto-install adds | Both | ✅ |
-| **🤖 Auto-Install** | `AutoInstallDefaultPrinter` | String | `""` | **Implemented** — set as system default if it matches an installed printer | Sets macOS default printer | Both | ✅ |
-| **🚗 Drivers** | `PrinterDriverMappings` | Dictionary | `{}` | Printer name → path to PPD (works for both protocols) | Provides specific drivers for all printers | Both | ✅ |
-| **🚗 Drivers** | `DriverMappingsURL` | String | `""` | Remote JSON with driver info (protocol agnostic) | Enables dynamic driver updates | Both | ✅ |
-| **📊 Sheets** | `GoogleSheetsID` | String | `""` | Google Sheets spreadsheet ID (supports both protocols) | Enables Google Sheets driver management | Both | ✅ |
-| **📊 Sheets** | `GoogleSheetsAPIKey` | String | `""` | API Key for Sheet access | Required for Sheets authentication | Both | ✅ |
-| **📊 Sheets** | `GoogleSheetsRange` | String | `"printers!A:B"` | Range (e.g., `printers!A:B`) | Defines data location in spreadsheet | Both | ✅ |
-| **🔧 Advanced** | `EnableDetailedLogging` | Boolean | `false` | Gates the detailed file log — errors always logged, info/debug only when `true`; output is credential-redacted | Enable to capture a full troubleshooting log | Both | ✅ |
-| **🔧 Advanced** | `AllowFallbackWithGenericSuggestion` | Boolean | `false` | Allow generic drivers when specific unavailable | Enables installation with basic drivers | Both | ✅ |
+| Category | Key | Type | Default | Description | User Impact | MDM Manageable |
+|----------|-----|------|---------|-------------|-------------|----------------|
+| **🖥️ Server** | `PrintServerHost` | String | `""` | Hostname or IP address of print server | Required for printer discovery | ✅ |
+| **🖥️ Server** | `PrintServerPort` | Integer | `445` | SMB port for print server connection | Usually 445 for SMB/CIFS | ✅ |
+| **🖥️ Server** | `PrintServerDomain` | String | `""` | Domain name for SMB authentication | Used internally for server communication | ✅ |
+| **🔐 Auth** | `RequireAuthentication` | Boolean | `false` | Whether users must authenticate to access printers | Shows/hides login dialog | ✅ |
+| **🔐 Auth** | `DefaultDomain` | String | `""` | Pre-fills domain field in authentication dialog | Reduces user typing, improves UX | ✅ |
+| **👤 Permissions** | `AllowUserServerChange` | Boolean | `true` | Can users modify server settings | Shows/hides server configuration UI | ✅ |
+| **👤 Permissions** | `AllowUserInstall` | Boolean | `true` | Can users install printers | Shows/hides install buttons | ✅ |
+| **👤 Permissions** | `AllowUserUninstall` | Boolean | `true` | Can users remove installed printers | Shows/hides uninstall buttons | ✅ |
+| **🤖 Auto-Install** | `AutoInstallPrinters` | Boolean | `false` | Enable auto-install of eligible printers | Installs without user interaction | ✅ |
+| **🤖 Auto-Install** | `AutoInstallPrinterNames` | Array | `[]` | Names to auto-install (case-insensitive); empty = configured-server SMB queues only, never USB | Scopes what auto-install adds | ✅ |
+| **🤖 Auto-Install** | `AutoInstallDefaultPrinter` | String | `""` | Printer name to set as system default | Sets macOS default printer | ✅ |
+| **🚗 Drivers** | `PrinterDriverMappings` | Dictionary | `{}` | Static printer name → PPD path mappings | Provides specific drivers for printers | ✅ |
+| **🚗 Drivers** | `DriverMappingsURL` | String | `""` | Remote JSON/CSV URL for driver mappings | Enables dynamic driver updates | ✅ |
+| **📊 Sheets** | `GoogleSheetsID` | String | `""` | Google Sheets spreadsheet ID | Enables Google Sheets driver management | ✅ |
+| **📊 Sheets** | `GoogleSheetsAPIKey` | String | `""` | API key for Google Sheets access | Required for Sheets authentication | ✅ |
+| **📊 Sheets** | `GoogleSheetsRange` | String | `"printers!A:B"` | Cell range to read from sheet | Defines data location in spreadsheet | ✅ |
+| **🔧 Advanced** | `EnableDetailedLogging` | Boolean | `false` | Enable comprehensive application logging | Affects performance, aids troubleshooting | ✅ |
+| **🔧 Advanced** | `AllowFallbackWithGenericSuggestion` | Boolean | `false` | Allow generic drivers when specific unavailable | Enables installation with basic drivers | ✅ |
 
 ---
 
-### 🔄 Enhanced Configuration Key Relationships
+### 🔄 Configuration Key Relationships
 
-```mermaid
-graph TD
-    A[DiscoveryMode] --> B{Protocol Selection}
-    B -->|SMB| C[PrintServerHost]
-    B -->|IPP| D[IPPServerHost]
-    B -->|Both| E[Both Servers]
-    
-    C --> F[SMB Authentication]
-    D --> G[IPP Authentication]
-    E --> H[Multi-Protocol Auth]
-    
-    F --> I[SMB Printer Discovery]
-    G --> J[IPP Printer Discovery]
-    H --> K[Combined Discovery]
-    
-    I --> L[Unified Driver Mapping]
-    J --> L
-    K --> L
-    
-    L --> M[Printer Installation]
-    M --> N[Both SMB and IPP Support]
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                               Server Configuration                                   │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  PrintServerHost ──┐                                                                │
+│  PrintServerPort ──┼──► Server Connection ──► Printer Discovery                     │
+│  PrintServerDomain ┘                                                                │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              Authentication Flow                                    │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  RequireAuthentication ──┐                                                          │
+│  DefaultDomain ──────────┼──► User Login ──► Access Control                         │
+│  AllowUserServerChange ──┘                                                          │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                               Driver Management                                     │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  PrinterDriverMappings ──┐                                                          │
+│  DriverMappingsURL ──────┼──► Driver Selection ──► Printer Installation             │
+│  GoogleSheetsID ─────────┤                                                          │
+│  GoogleSheetsAPIKey ─────┤                                                          │
+│  GoogleSheetsRange ──────┘                                                          │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                             Installation Control                                    │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  AllowUserInstall ──┐                                                               │
+│  AllowUserUninstall ─┼──► User Permissions ──► UI Behavior                          │
+│  AutoInstallPrinters ┤                                                              │
+│  AutoInstallDefaultPrinter ┘                                                        │
+└─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 💡 Enhanced Best Practices for Multi-Protocol Configuration
+### 📋 Configuration Key Usage by Scenario
 
-#### ✅ Do's
-- **Always set DiscoveryMode** - Determines which protocols are used
-- **Configure appropriate servers** - Set both SMB and IPP servers for mixed environments
-- **Use unified driver mappings** - Same mappings work for both protocols
-- **Test both protocols separately** - Ensure each works independently
-- **Enable logging during testing** - Set EnableDetailedLogging: true
-- **Use protocol-specific naming** - Help distinguish SMB vs IPP printers
+#### 🏢 Small Business Keys
+```yaml
+Essential Keys:
+  ✅ PrintServerHost: "printserver.company.com"
+  ✅ RequireAuthentication: true
+  ✅ DefaultDomain: "COMPANY"
+  ✅ AllowUserServerChange: true
 
-#### ❌ Don'ts
-- **Don't forget discovery mode** - Missing DiscoveryMode defaults to "Both"
-- **Don't mix authentication settings** - Be clear about which protocols need auth
-- **Don't ignore protocol-specific ports** - 445 for SMB, 631 for IPP
-- **Don't assume same credentials** - SMB and IPP may use different auth
-- **Don't enable logging in production** - Performance impact
-- **Don't forget SSL settings** - IPP can use encrypted IPPS
+Optional Keys:
+  ➕ PrinterDriverMappings: {basic mappings}
+  ➕ AllowFallbackWithGenericSuggestion: true
+```
+
+#### 🏭 Enterprise Keys
+```yaml
+Required Keys:
+  ✅ PrintServerHost: "corpprint.enterprise.local"
+  ✅ PrintServerDomain: "ENTERPRISE"
+  ✅ RequireAuthentication: true
+  ✅ DefaultDomain: "ENTERPRISE"
+  ✅ AllowUserServerChange: false
+  ✅ AllowUserUninstall: false
+
+Driver Management:
+  ✅ PrinterDriverMappings: {comprehensive mappings}
+  ✅ GoogleSheetsID: "spreadsheet-id"
+  ✅ GoogleSheetsAPIKey: "api-key"
+```
+
+#### 🧑‍💻 Kiosk/Lab Keys
+```yaml
+Core Keys:
+  ✅ PrintServerHost: "labprint.university.edu"
+  ✅ RequireAuthentication: false
+  ✅ AutoInstallPrinters: true
+  ✅ AutoInstallDefaultPrinter: "LAB-MAIN-PRINTER"
+  ✅ AllowUserServerChange: false
+  ✅ AllowUserInstall: false
+  ✅ AllowUserUninstall: false
+
+Performance:
+  ✅ EnableDetailedLogging: false
+  ✅ AllowFallbackWithGenericSuggestion: true
+```
+
+#### 🌐 Remote Managed Keys
+```yaml
+Server Keys:
+  ✅ PrintServerHost: "printserver.techcorp.com"
+  ✅ RequireAuthentication: true
+  ✅ DefaultDomain: "TECHCORP"
+  ✅ AllowUserServerChange: false
+
+Remote Management:
+  ✅ DriverMappingsURL: "https://it.company.com/mappings.json"
+  ✅ EnableDetailedLogging: true
+  ✅ AllowFallbackWithGenericSuggestion: true
+```
 
 ---
 
-### 🔍 Enhanced Configuration Troubleshooting Guide
+### 🎛️ Configuration Key Impact Matrix
 
-| Issue | Likely Cause | Check These Keys | Solution | Protocols |
-|-------|-------------|------------------|----------|-----------|
-| **No printers found** | Server connection | `DiscoveryMode`, `PrintServerHost`, `IPPServerHost` | Verify both server connections | Both |
-| **Only SMB printers** | IPP not configured | `IPPServerHost`, `DiscoveryMode` | Configure IPP server settings | IPP |
-| **Only IPP printers** | SMB not configured | `PrintServerHost`, `DiscoveryMode` | Configure SMB server settings | SMB |
-| **SMB auth fails** | Domain mismatch | `DefaultDomain`, `PrintServerDomain` | Ensure domains match your AD | SMB |
-| **IPP auth fails** | Authentication settings | `IPPRequireAuthentication`, `DefaultDomain` | Check IPP auth configuration | IPP |
-| **Users can't install** | Permissions | `AllowUserInstall` | Set to `true` or use admin unlock | Both |
-| **Wrong drivers selected** | Missing mappings | `PrinterDriverMappings`, `DriverMappingsURL` | Add protocol-specific mappings | Both |
-| **Auto-install not working** | Configuration | `AutoInstallPrinters`, `AutoInstallDefaultPrinter` | Enable and specify default | Both |
-| **Settings not applying** | MDM sync | All managed keys | Restart and check profile installation | Both |
+| Setting | UI Visibility | User Control | System Behavior | IT Control |
+|---------|--------------|--------------|-----------------|------------|
+| **PrintServerHost** | Server field shown/hidden | Can edit if allowed | Determines discovery target | Full MDM control |
+| **RequireAuthentication** | Login dialog shown/hidden | Must authenticate | Affects all operations | MDM enforceable |
+| **AllowUserServerChange** | Server settings locked/unlocked | Can modify server | Changes discovery behavior | Admin policy |
+| **AllowUserInstall** | Install buttons shown/hidden | Can install printers | Affects printer addition | User restriction |
+| **AllowUserUninstall** | Uninstall options shown/hidden | Can remove printers | Affects printer removal | User restriction |
+| **AutoInstallPrinters** | Manual vs automatic mode | No user interaction | Installs without prompts | Deployment control |
+| **PrinterDriverMappings** | Driver suggestions shown | Auto-selected drivers | Improves installation success | Driver standardization |
+| **GoogleSheetsID** | Remote management indicator | No direct control | Dynamic driver updates | Centralized management |
+| **EnableDetailedLogging** | Debug info availability | No user control | Performance impact | Troubleshooting aid |
 
-**This comprehensive README now fully reflects the enhanced multi-protocol capabilities of the NetworkPrinter application, supporting both SMB/CIFS and IPP/IPPS environments with unified driver management.**
+---
+
+### 🔧 Advanced Configuration Patterns
+
+#### Pattern 1: Progressive Restriction
+```xml
+<!-- Start flexible, become restrictive -->
+<key>AllowUserServerChange</key>
+<true/>  <!-- Initially allow -->
+<key>AllowUserInstall</key>
+<true/>  <!-- Users can install -->
+<key>AllowUserUninstall</key>
+<false/> <!-- But not uninstall -->
+```
+
+#### Pattern 2: Staged Deployment
+```xml
+<!-- Phase 1: Manual with logging -->
+<key>AutoInstallPrinters</key>
+<false/>
+<key>EnableDetailedLogging</key>
+<true/>
+
+<!-- Phase 2: Automated (update profile) -->
+<key>AutoInstallPrinters</key>
+<true/>
+<key>EnableDetailedLogging</key>
+<false/>
+```
+
+#### Pattern 3: Hybrid Management
+```xml
+<!-- Static local + Dynamic remote -->
+<key>PrinterDriverMappings</key>
+<dict>
+  <key>FALLBACK-GENERIC</key>
+  <string>/Library/Printers/PPDs/Contents/Resources/Generic.ppd</string>
+</dict>
+<key>DriverMappingsURL</key>
+<string>https://company.com/printers.json</string>
+```
+
+---
+
+### 📚 Configuration Key Dependencies
+
+```mermaid
+graph TD
+    A[PrintServerHost] --> B[Printer Discovery]
+    C[RequireAuthentication] --> D[Login Dialog]
+    E[DefaultDomain] --> D
+    F[AllowUserServerChange] --> G[Server Settings UI]
+    H[AllowUserInstall] --> I[Install Buttons]
+    J[AllowUserUninstall] --> K[Uninstall Options]
+    L[AutoInstallPrinters] --> M[Auto Installation]
+    N[AutoInstallDefaultPrinter] --> M
+    O[PrinterDriverMappings] --> P[Driver Selection]
+    Q[GoogleSheetsID] --> R[Remote Drivers]
+    S[GoogleSheetsAPIKey] --> R
+    T[DriverMappingsURL] --> U[JSON Drivers]
+    V[EnableDetailedLogging] --> W[Debug Output]
+```
+
+---
+
+### 💡 Best Practices for Configuration Keys
+
+#### ✅ Do's
+- **Always set PrintServerHost** - Required for basic functionality
+- **Use DefaultDomain** - Improves user experience
+- **Enable logging during testing** - Set EnableDetailedLogging: true
+- **Test with minimal permissions** - Start restrictive, then open up
+- **Use driver mappings** - Reduces installation failures
+- **Combine management methods** - Static + Remote for redundancy
+
+#### ❌ Don'ts
+- **Don't leave authentication unclear** - Always set RequireAuthentication explicitly
+- **Don't mix conflicting permissions** - AutoInstall + AllowUserInstall: false
+- **Don't enable logging in production** - Performance impact
+- **Don't forget fallback options** - Always provide generic drivers
+- **Don't hardcode sensitive data** - Use secure methods for API keys
+
+---
+
+### 🔍 Configuration Troubleshooting Guide
+
+| Issue | Likely Cause | Check These Keys | Solution |
+|-------|-------------|------------------|----------|
+| **No printers found** | Server connection | `PrintServerHost`, `PrintServerPort`, `PrintServerDomain` | Verify network connectivity |
+| **Authentication fails** | Domain mismatch | `DefaultDomain`, `PrintServerDomain` | Ensure domains match your AD |
+| **Users can't install** | Permissions | `AllowUserInstall` | Set to `true` or use admin unlock |
+| **Wrong drivers selected** | Missing mappings | `PrinterDriverMappings`, `DriverMappingsURL` | Add specific printer mappings |
+| **Auto-install not working** | Configuration | `AutoInstallPrinters`, `AutoInstallDefaultPrinter` | Enable and specify default |
+| **Settings not applying** | MDM sync | All managed keys | Restart and check profile installation |
+
