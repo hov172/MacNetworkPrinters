@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadDisplayName</key>
+    <string>Network Printer Settings</string>
+    <key>PayloadIdentifier</key>
+    <string>com.example.networkprinter.configuration</string> 
+    <key>PayloadOrganization</key>
+    <string>Your Organization</string> 
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadScope</key>
+    <string>System</string> 
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>GENERATED_PAYLOAD_UUID_TOP_LEVEL</string> 
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadDescription</key>
+            <string>Configures Network Printer application settings</string>
+            <key>PayloadDisplayName</key>
+            <string>Network Printer App Preferences</string>
+            <key>PayloadIdentifier</key>
+            <string>com.networkprinter.preferences</string> 
+            <key>PayloadOrganization</key>
+            <string>Your Organization</string> 
+            <key>PayloadType</key>
+            <string>com.apple.ManagedClient.preferences</string> 
+            <key>PayloadUUID</key>
+            <string>GENERATED_PAYLOAD_UUID_PREFERENCES</string> 
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>PayloadEnabled</key>
+            <true/>
+            <key>PayloadContent</key>
+            <dict>
+                <key>com.networkprinter.preferences</key> 
+                <dict>
+                    <key>Forced</key>
+                    <array>
+                        <dict>
+                            <key>mcx_preference_settings</key>
+                            <dict>
+                                <key>DiscoveryMode</key>
+                                <string>All</string>
+                                <key>PrintServerHost</key>
+                                <string>YOUR_PRINTSERVER_HOSTNAME_OR_IP</string> 
+                                <key>PrintServerPort</key>
+                                <integer>445</integer>
+                                <key>PrintServerDomain</key>
+                                <string>YOUR_DOMAIN_NAME</string> 
+                                <key>IPPServerHost</key>
+                                <string>YOUR_IPP_SERVER_HOST</string>
+                                <key>IPPServerPort</key>
+                                <integer>631</integer>
+                                <key>IPPUseSSL</key>
+                                <false/>
+                                <key>IPPRequireAuthentication</key>
+                                <false/>
+                                <key>RequireAuthentication</key>
+                                <true/>
+                                <key>DefaultDomain</key>
+                                <string>YOUR_DOMAIN_NAME</string> 
+                                <key>AutoInstallPrinters</key>
+                                <false/>
+                                <!-- AutoInstallPrinterNames: allowlist of printer names (case-insensitive) eligible
+                                     for auto-install when AutoInstallPrinters is true. Leave empty to auto-install
+                                     only printers published by the configured SMB/IPP print servers; mDNS/AirPrint/
+                                     IPP Everywhere finds and USB printers are never auto-installed unless listed. -->
+                                <key>AutoInstallPrinterNames</key>
+                                <array>
+                                    <!-- <string>CORP-HP-4015-FL1</string> -->
+                                </array>
+                                <key>AutoInstallDefaultPrinter</key>
+                                <string></string>
+                                <key>AllowUserServerChange</key>
+                                <true/>
+                                <key>AllowUserInstall</key>
+                                <true/>
+                                <key>AllowUserUninstall</key>
+                                <true/>
+                                <key>EnableDetailedLogging</key>
+                                <false/>
+                                <key>AllowFallbackWithGenericSuggestion</key>
+                                <false/>
+                                <key>PrinterDriverMappings</key>
+                                <dict>
+                                    <key>CORP-HP-4015-FL1</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz</string>
+                                    <key>CORP-CANON-5535-FL2</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz</string>
+                                    <key>CORP-XEROX-7835-FL3</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Xerox WorkCentre 7835.ppd.gz</string>
+                                    <key>CORP-BROTHER-L2350-FL4</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Brother HL-L2350DW.ppd.gz</string>
+                                    <key>IPP-CUPS-COLOR-01</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Generic ColorLaser.ppd</string>
+                                    <key>IPP-CUPS-BW-01</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Generic PostScript Printer.ppd</string>
+                                </dict>
+                                <key>DriverMappingsURL</key>
+                                <string></string>
+                                <!-- ===================================================================
+                                     Optional: dynamic driver mappings from a Google Sheet.
+                                     Leave the two placeholders below UNCHANGED in any committed copy of
+                                     this profile. Substitute the real values ONLY in the profile you
+                                     actually deploy through your MDM (Jamf/Intune) — never commit a real
+                                     API key to source control.
+
+                                       GoogleSheetsID      -> the spreadsheet ID from its URL:
+                                                              docs.google.com/spreadsheets/d/<THIS_PART>/edit
+                                       GoogleSheetsAPIKey   -> a Google Cloud API key RESTRICTED to the
+                                                              Google Sheets API (APIs & Services ->
+                                                              Credentials -> your key -> API restrictions).
+                                                              Do not ship an unrestricted key.
+                                       GoogleSheetsRange    -> the A1 range holding "printer name | driver
+                                                              path" rows (default: the first two columns).
+
+                                     If you are not using Google Sheets, delete these three keys (and
+                                     PrinterDriverMappings above handles static/MDM mappings on its own).
+                                     ================================================================= -->
+                                <key>GoogleSheetsID</key>
+                                <string>YOUR_GOOGLE_SHEETS_ID</string>
+                                <key>GoogleSheetsAPIKey</key>
+                                <string>YOUR_GOOGLE_SHEETS_API_KEY</string>
+                                <key>GoogleSheetsRange</key>
+                                <string>printers!A:B</string>
+                                <key>AirPrintDiscoveryTimeout</key>
+                                <integer>30</integer>
+                                <key>IPPDiscoveryTimeout</key>
+                                <integer>30</integer>
+                                <key>EnableAirPrintValidation</key>
+                                <true/>
+                                <key>EnableIPPEverywhereValidation</key>
+                                <true/>
+                                <key>PreferSecureConnections</key>
+                                <true/>
+                                <key>MaxDiscoveryRetries</key>
+                                <integer>3</integer>
+                                <key>AllowDriverlessInstallation</key>
+                                <true/>
+                                <key>EnableBonjourDiscovery</key>
+                                <true/>
+                                <key>DefaultPrinterSelectionMode</key>
+                                <string>User</string>
+                                <key>EnablePrinterDuplicationDetection</key>
+                                <true/>
+                                <key>MinimumDiscoveryDuration</key>
+                                <integer>1200</integer>
+                                <key>EnableCrossVLANDiscovery</key>
+                                <false/>
+                                <key>TargetSubnets</key>
+                                <array>
+                                    <string>192.168.1.0/24</string>
+                                    <string>10.0.0.0/16</string>
+                                </array>
+                                <key>DNSServers</key>
+                                <array>
+                                    <string>8.8.8.8</string>
+                                    <string>8.8.4.4</string>
+                                </array>
+                                <key>DNSDomains</key>
+                                <array>
+                                    <string>local</string>
+                                    <string>company.com</string>
+                                </array>
+                                <key>MaxConcurrentScans</key>
+                                <integer>10</integer>
+                                <key>CrossVLANScanTimeout</key>
+                                <real>5.0</real>
+                                <key>EnableDirectIPScan</key>
+                                <true/>
+                                <key>EnableDNSSDDiscovery</key>
+                                <true/>
+                                <key>EnableNetworkTopologyDetection</key>
+                                <true/>
+                                <key>AirPrintServiceTypes</key>
+                                <array>
+                                    <string>_airprint._tcp</string>
+                                    <string>_ipp._tcp</string>
+                                    <string>_ipps._tcp</string>
+                                </array>
+                                <key>RequiredAirPrintCapabilities</key>
+                                <array>
+                                    <string>image/jpeg</string>
+                                    <string>image/png</string>
+                                    <string>application/pdf</string>
+                                </array>
+                                <key>EnableAirPrintSecurityValidation</key>
+                                <true/>
+                                <key>AirPrintConnectionTimeout</key>
+                                <real>10.0</real>
+                                <key>EnableIPPEverywhereAutoDetection</key>
+                                <true/>
+                                <key>IPPEverywhereRequiredFormats</key>
+                                <array>
+                                    <string>image/pwg-raster</string>
+                                    <string>image/urf</string>
+                                </array>
+                                <key>EnableAdvancedIPPCapabilityDetection</key>
+                                <true/>
+                                <key>MaxSimultaneousDiscoveryTasks</key>
+                                <integer>5</integer>
+                                <key>EnableDiscoveryProgressReporting</key>
+                                <true/>
+                                <key>AutoRefreshInterval</key>
+                                <integer>0</integer>
+                                <key>EnableSmartSubnetDetection</key>
+                                <true/>
+                                <key>CrossVLANDiscoveryOrder</key>
+                                <array>
+                                    <string>DirectIPScan</string>
+                                    <string>DNSSDDiscovery</string>
+                                    <string>NetworkTopology</string>
+                                </array>
+                            </dict>
+                        </dict>
+                    </array>
+                </dict>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>

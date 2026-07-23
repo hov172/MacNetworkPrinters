@@ -16,6 +16,16 @@ NetworkPrinter is a comprehensive macOS application designed to help users disco
 
 ---
 
+## 📦 Configuration Samples
+
+Ready-to-adapt deployment files live in [`ConfigFiles/`](ConfigFiles/):
+
+* [`NetworkPrinterSettings.mobileconfig`](ConfigFiles/NetworkPrinterSettings.mobileconfig) — sample MDM configuration profile with placeholder values and inline comments for every key
+* [`com.networkprinter.preferences.plist`](ConfigFiles/com.networkprinter.preferences.plist) — sample managed-preferences plist for the `com.networkprinter.preferences` domain
+* [`DefaultPrinterDriverMappings.json`](ConfigFiles/DefaultPrinterDriverMappings.json) — the bundled driver mappings, as a format reference for your own Google Sheet or hosted mapping file
+
+---
+
 ## ✨ Features
 
 * **🎨 Modern SwiftUI Interface**: Clean, intuitive design with smooth animations and responsive layouts

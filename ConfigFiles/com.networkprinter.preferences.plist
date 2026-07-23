@@ -1,0 +1,872 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>pfm_atomic</key>
+    <true/>
+    <key>pfm_description</key>
+    <string>Configuration settings for the Network Printer application.</string>
+    <key>pfm_domain</key>
+    <string>com.networkprinter.preferences</string>
+    <key>pfm_format_version</key>
+    <integer>1</integer>
+    <key>pfm_interaction</key>
+    <string>exclusive</string>
+    <key>pfm_last_modified</key>
+    <date>2025-01-11T12:00:00Z</date>
+    <key>pfm_name</key>
+    <string>Network Printer Preferences</string>
+    <key>pfm_platforms</key>
+    <array>
+        <string>macOS</string>
+    </array>
+    <key>pfm_subkeys</key>
+    <array>
+        <dict>
+            <key>pfm_name</key>
+            <string>DiscoveryMode</string>
+            <key>pfm_title</key>
+            <string>Printer Discovery Mode</string>
+            <key>pfm_description</key>
+            <string>Protocol(s) to use for printer discovery: SMB (SMB/CIFS only), IPP (IPP/IPPS only), Both (SMB and IPP), AirPrint (AirPrint only), IPP Everywhere (IPP Everywhere only), or All (comprehensive discovery of all protocols).</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_range_list</key>
+            <array>
+                <string>SMB</string>
+                <string>IPP</string>
+                <string>Both</string>
+                <string>AirPrint</string>
+                <string>IPP Everywhere</string>
+                <string>All</string>
+            </array>
+            <key>pfm_default</key>
+            <string>All</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>PrintServerHost</string>
+            <key>pfm_title</key>
+            <string>SMB Print Server Host</string>
+            <key>pfm_description</key>
+            <string>Hostname or IP address of the SMB/CIFS print server.</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string>YOUR_PRINTSERVER_HOSTNAME_OR_IP</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>PrintServerPort</string>
+            <key>pfm_title</key>
+            <string>SMB Print Server Port</string>
+            <key>pfm_description</key>
+            <string>Port number for the SMB print server (typically 445).</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>445</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>PrintServerDomain</string>
+            <key>pfm_title</key>
+            <string>SMB Print Server Domain</string>
+            <key>pfm_description</key>
+            <string>Windows domain name for the SMB print server (e.g., AD_DOMAIN).</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string>YOUR_DOMAIN_NAME</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>IPPServerHost</string>
+            <key>pfm_title</key>
+            <string>IPP Print Server Host</string>
+            <key>pfm_description</key>
+            <string>Hostname or IP address of the IPP/IPPS print server.</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string>YOUR_IPP_SERVER_HOST</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>IPPServerPort</string>
+            <key>pfm_title</key>
+            <string>IPP Print Server Port</string>
+            <key>pfm_description</key>
+            <string>Port number for the IPP print server (typically 631).</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>631</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>IPPUseSSL</string>
+            <key>pfm_title</key>
+            <string>IPP Use SSL/TLS (IPPS)</string>
+            <key>pfm_description</key>
+            <string>Use encrypted IPPS protocol instead of plain IPP.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>IPPRequireAuthentication</string>
+            <key>pfm_title</key>
+            <string>IPP Require Authentication</string>
+            <key>pfm_description</key>
+            <string>Whether authentication is required for IPP print servers.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>RequireAuthentication</string>
+            <key>pfm_title</key>
+            <string>SMB Require Authentication</string>
+            <key>pfm_description</key>
+            <string>Whether authentication is required to connect to the SMB print server.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>DefaultDomain</string>
+            <key>pfm_title</key>
+            <string>Default Authentication Domain</string>
+            <key>pfm_description</key>
+            <string>Default domain to use for SMB authentication (e.g., AD_DOMAIN).</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string>YOUR_DOMAIN_NAME</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AutoInstallPrinters</string>
+            <key>pfm_title</key>
+            <string>Auto-Install Discovered Printers</string>
+            <key>pfm_description</key>
+            <string>Automatically install eligible discovered printers. Eligibility is controlled by AutoInstallPrinterNames: with a non-empty allowlist only listed printers are installed; with an empty allowlist only printers published by the configured print servers are installed.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AutoInstallPrinterNames</string>
+            <key>pfm_title</key>
+            <string>Auto-Install Printer Allowlist</string>
+            <key>pfm_description</key>
+            <string>List of printer names permitted to auto-install when AutoInstallPrinters is enabled. Names are matched case-insensitively. If empty, only printers published by the configured SMB print server or the configured IPP server are auto-installed; printers found via mDNS/AirPrint/IPP Everywhere auto-discovery and USB printers are never auto-installed.</string>
+            <key>pfm_type</key>
+            <string>array</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_title</key>
+                    <string>Printer Name</string>
+                    <key>pfm_description</key>
+                    <string>Printer name (share name) allowed to auto-install, matched case-insensitively.</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>CORP-HP-4015-FL1</string>
+                </dict>
+            </array>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AutoInstallDefaultPrinter</string>
+            <key>pfm_title</key>
+            <string>Auto-Install and Set Default Printer</string>
+            <key>pfm_description</key>
+            <string>Specify a printer name (share name) to automatically install and set as default. Leave empty if not used.</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string></string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AllowUserServerChange</string>
+            <key>pfm_title</key>
+            <string>Allow User to Change Server Settings</string>
+            <key>pfm_description</key>
+            <string>Permit users to modify print server connection details in the app.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AllowUserInstall</string>
+            <key>pfm_title</key>
+            <string>Allow User to Install Printers</string>
+            <key>pfm_description</key>
+            <string>Permit users to manually install printers via the app.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AllowUserUninstall</string>
+            <key>pfm_title</key>
+            <string>Allow User to Uninstall Printers</string>
+            <key>pfm_description</key>
+            <string>Permit users to uninstall printers via the app.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableDetailedLogging</string>
+            <key>pfm_title</key>
+            <string>Enable Detailed Logging</string>
+            <key>pfm_description</key>
+            <string>Enable verbose logging for troubleshooting.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AllowFallbackWithGenericSuggestion</string>
+            <key>pfm_title</key>
+            <string>Allow Fallback with Generic Driver Suggestion</string>
+            <key>pfm_description</key>
+            <string>Allow automatic installation with generic driver when no specific driver is found.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>PrinterDriverMappings</string>
+            <key>pfm_title</key>
+            <string>Printer Driver Mappings</string>
+            <key>pfm_description</key>
+            <string>Dictionary mapping printer share names to their optimal macOS driver PPD file paths.</string>
+            <key>pfm_type</key>
+            <string>dictionary</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_name</key>
+                    <string>pfm_key_name</string>
+                    <key>pfm_title</key>
+                    <string>Printer Share Name</string>
+                    <key>pfm_description</key>
+                    <string>The exact name of the printer share as it appears on the print server.</string>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>HP-LaserJet-Pro-4015n</string>
+                </dict>
+                <dict>
+                    <key>pfm_name</key>
+                    <string>pfm_key_value</string>
+                    <key>pfm_title</key>
+                    <string>PPD Driver Path</string>
+                    <key>pfm_description</key>
+                    <string>Full path to the PPD driver file on macOS.</string>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz</string>
+                </dict>
+            </array>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>DriverMappingsURL</string>
+            <key>pfm_title</key>
+            <string>Remote Driver Mappings URL</string>
+            <key>pfm_description</key>
+            <string>URL to fetch printer driver mappings from (JSON or CSV format). Leave empty if not used.</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string></string>
+            <key>pfm_value_placeholder</key>
+            <string>https://your-company.com/printer-drivers.json</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>GoogleSheetsID</string>
+            <key>pfm_title</key>
+            <string>Google Sheets Spreadsheet ID</string>
+            <key>pfm_description</key>
+            <string>Google Sheets spreadsheet ID containing printer driver mappings. Leave empty if not used.</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string>YOUR_GOOGLE_SHEETS_ID</string>
+            <key>pfm_value_placeholder</key>
+            <string>YOUR_GOOGLE_SHEETS_ID</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>GoogleSheetsAPIKey</string>
+            <key>pfm_title</key>
+            <string>Google Sheets API Key</string>
+            <key>pfm_description</key>
+            <string>Google Sheets API key for accessing the spreadsheet. Leave empty if not used.</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string></string>
+            <key>pfm_value_placeholder</key>
+            <string>YOUR_GOOGLE_SHEETS_API_KEY</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>GoogleSheetsRange</string>
+            <key>pfm_title</key>
+            <string>Google Sheets Cell Range</string>
+            <key>pfm_description</key>
+            <string>Cell range in the Google Sheets containing printer mappings (e.g., &apos;printers!A:B&apos;).</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_default</key>
+            <string>printers!A:B</string>
+            <key>pfm_value_placeholder</key>
+            <string>printers!A:B</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AirPrintDiscoveryTimeout</string>
+            <key>pfm_title</key>
+            <string>AirPrint Discovery Timeout</string>
+            <key>pfm_description</key>
+            <string>Timeout in seconds for AirPrint discovery operations.</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>30</integer>
+            <key>pfm_range_min</key>
+            <integer>10</integer>
+            <key>pfm_range_max</key>
+            <integer>120</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>IPPDiscoveryTimeout</string>
+            <key>pfm_title</key>
+            <string>IPP Discovery Timeout</string>
+            <key>pfm_description</key>
+            <string>Timeout in seconds for IPP discovery operations.</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>30</integer>
+            <key>pfm_range_min</key>
+            <integer>10</integer>
+            <key>pfm_range_max</key>
+            <integer>120</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableAirPrintValidation</string>
+            <key>pfm_title</key>
+            <string>Enable AirPrint Validation</string>
+            <key>pfm_description</key>
+            <string>Validate AirPrint capabilities before listing printers.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableIPPEverywhereValidation</string>
+            <key>pfm_title</key>
+            <string>Enable IPP Everywhere Validation</string>
+            <key>pfm_description</key>
+            <string>Validate IPP Everywhere capabilities before listing printers.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>PreferSecureConnections</string>
+            <key>pfm_title</key>
+            <string>Prefer Secure Connections</string>
+            <key>pfm_description</key>
+            <string>Prefer IPPS over IPP when both are available.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>MaxDiscoveryRetries</string>
+            <key>pfm_title</key>
+            <string>Maximum Discovery Retries</string>
+            <key>pfm_description</key>
+            <string>Maximum number of retry attempts for failed discovery operations.</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>3</integer>
+            <key>pfm_range_min</key>
+            <integer>1</integer>
+            <key>pfm_range_max</key>
+            <integer>10</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AllowDriverlessInstallation</string>
+            <key>pfm_title</key>
+            <string>Allow Driverless Installation</string>
+            <key>pfm_description</key>
+            <string>Allow installation of AirPrint and IPP Everywhere printers without explicit drivers.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableBonjourDiscovery</string>
+            <key>pfm_title</key>
+            <string>Enable Bonjour Discovery</string>
+            <key>pfm_description</key>
+            <string>Enable Bonjour/mDNS discovery for network printers.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>DefaultPrinterSelectionMode</string>
+            <key>pfm_title</key>
+            <string>Default Printer Selection Mode</string>
+            <key>pfm_description</key>
+            <string>How to handle default printer selection: User (user chooses), Auto (first installed), or Named (specific printer name).</string>
+            <key>pfm_type</key>
+            <string>string</string>
+            <key>pfm_range_list</key>
+            <array>
+                <string>User</string>
+                <string>Auto</string>
+                <string>Named</string>
+            </array>
+            <key>pfm_default</key>
+            <string>User</string>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnablePrinterDuplicationDetection</string>
+            <key>pfm_title</key>
+            <string>Enable Printer Duplication Detection</string>
+            <key>pfm_description</key>
+            <string>Detect and filter duplicate printers found via different protocols.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>MinimumDiscoveryDuration</string>
+            <key>pfm_title</key>
+            <string>Minimum Discovery Duration</string>
+            <key>pfm_description</key>
+            <string>Minimum time in milliseconds to show discovery progress (prevents UI flashing).</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>1200</integer>
+            <key>pfm_range_min</key>
+            <integer>500</integer>
+            <key>pfm_range_max</key>
+            <integer>5000</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableCrossVLANDiscovery</string>
+            <key>pfm_title</key>
+            <string>Enable Cross-VLAN Discovery</string>
+            <key>pfm_description</key>
+            <string>Enable discovery of AirPrint printers across different VLANs/subnets.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <false/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>TargetSubnets</string>
+            <key>pfm_title</key>
+            <string>Target Subnets for Cross-VLAN Discovery</string>
+            <key>pfm_description</key>
+            <string>List of subnets to scan for AirPrint printers (CIDR notation, e.g., 192.168.1.0/24).</string>
+            <key>pfm_type</key>
+            <string>array</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_title</key>
+                    <string>Subnet</string>
+                    <key>pfm_description</key>
+                    <string>Subnet in CIDR notation (e.g., 192.168.1.0/24)</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>192.168.1.0/24</string>
+                </dict>
+            </array>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>DNSServers</string>
+            <key>pfm_title</key>
+            <string>DNS Servers for Cross-VLAN Discovery</string>
+            <key>pfm_description</key>
+            <string>List of DNS servers to use for unicast DNS-SD queries.</string>
+            <key>pfm_type</key>
+            <string>array</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_title</key>
+                    <string>DNS Server</string>
+                    <key>pfm_description</key>
+                    <string>DNS server IP address</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>8.8.8.8</string>
+                </dict>
+            </array>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>DNSDomains</string>
+            <key>pfm_title</key>
+            <string>DNS Domains for Cross-VLAN Discovery</string>
+            <key>pfm_description</key>
+            <string>List of DNS domains to search for AirPrint services.</string>
+            <key>pfm_type</key>
+            <string>array</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_title</key>
+                    <string>DNS Domain</string>
+                    <key>pfm_description</key>
+                    <string>DNS domain name</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>local</string>
+                </dict>
+            </array>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>MaxConcurrentScans</string>
+            <key>pfm_title</key>
+            <string>Maximum Concurrent Scans</string>
+            <key>pfm_description</key>
+            <string>Maximum number of concurrent IP scans during cross-VLAN discovery.</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>10</integer>
+            <key>pfm_range_min</key>
+            <integer>1</integer>
+            <key>pfm_range_max</key>
+            <integer>50</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>CrossVLANScanTimeout</string>
+            <key>pfm_title</key>
+            <string>Cross-VLAN Scan Timeout</string>
+            <key>pfm_description</key>
+            <string>Timeout in seconds for individual IP scans during cross-VLAN discovery.</string>
+            <key>pfm_type</key>
+            <string>real</string>
+            <key>pfm_default</key>
+            <real>5.0</real>
+            <key>pfm_range_min</key>
+            <real>1.0</real>
+            <key>pfm_range_max</key>
+            <real>30.0</real>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableDirectIPScan</string>
+            <key>pfm_title</key>
+            <string>Enable Direct IP Scanning</string>
+            <key>pfm_description</key>
+            <string>Enable direct IP scanning of target subnets for AirPrint printers.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableDNSSDDiscovery</string>
+            <key>pfm_title</key>
+            <string>Enable DNS-SD Discovery</string>
+            <key>pfm_description</key>
+            <string>Enable DNS-SD discovery using unicast queries to specified DNS servers.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableNetworkTopologyDetection</string>
+            <key>pfm_title</key>
+            <string>Enable Network Topology Detection</string>
+            <key>pfm_description</key>
+            <string>Enable automatic detection of adjacent subnets based on network topology.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AirPrintServiceTypes</string>
+            <key>pfm_title</key>
+            <string>AirPrint Service Types</string>
+            <key>pfm_description</key>
+            <string>List of Bonjour service types to discover for AirPrint printers.</string>
+            <key>pfm_type</key>
+            <string>array</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_title</key>
+                    <string>Service Type</string>
+                    <key>pfm_description</key>
+                    <string>Bonjour service type (e.g., _airprint._tcp)</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>_airprint._tcp</string>
+                </dict>
+            </array>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>RequiredAirPrintCapabilities</string>
+            <key>pfm_title</key>
+            <string>Required AirPrint Capabilities</string>
+            <key>pfm_description</key>
+            <string>List of required document formats for AirPrint validation.</string>
+            <key>pfm_type</key>
+            <string>array</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_title</key>
+                    <string>Document Format</string>
+                    <key>pfm_description</key>
+                    <string>MIME type of required document format</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>image/jpeg</string>
+                </dict>
+            </array>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableAirPrintSecurityValidation</string>
+            <key>pfm_title</key>
+            <string>Enable AirPrint Security Validation</string>
+            <key>pfm_description</key>
+            <string>Validate security capabilities of AirPrint printers before listing.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AirPrintConnectionTimeout</string>
+            <key>pfm_title</key>
+            <string>AirPrint Connection Timeout</string>
+            <key>pfm_description</key>
+            <string>Timeout in seconds for AirPrint printer connections during discovery.</string>
+            <key>pfm_type</key>
+            <string>real</string>
+            <key>pfm_default</key>
+            <real>10.0</real>
+            <key>pfm_range_min</key>
+            <real>1.0</real>
+            <key>pfm_range_max</key>
+            <real>60.0</real>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableIPPEverywhereAutoDetection</string>
+            <key>pfm_title</key>
+            <string>Enable IPP Everywhere Auto-Detection</string>
+            <key>pfm_description</key>
+            <string>Automatically detect IPP Everywhere capabilities in discovered printers.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>IPPEverywhereRequiredFormats</string>
+            <key>pfm_title</key>
+            <string>IPP Everywhere Required Formats</string>
+            <key>pfm_description</key>
+            <string>List of required document formats for IPP Everywhere validation.</string>
+            <key>pfm_type</key>
+            <string>array</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_title</key>
+                    <string>Document Format</string>
+                    <key>pfm_description</key>
+                    <string>MIME type of required document format</string>
+                    <key>pfm_value_placeholder</key>
+                    <string>image/pwg-raster</string>
+                </dict>
+            </array>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableAdvancedIPPCapabilityDetection</string>
+            <key>pfm_title</key>
+            <string>Enable Advanced IPP Capability Detection</string>
+            <key>pfm_description</key>
+            <string>Enable detailed detection of IPP printer capabilities using ipptool.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>MaxSimultaneousDiscoveryTasks</string>
+            <key>pfm_title</key>
+            <string>Maximum Simultaneous Discovery Tasks</string>
+            <key>pfm_description</key>
+            <string>Maximum number of simultaneous discovery tasks to prevent system overload.</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>5</integer>
+            <key>pfm_range_min</key>
+            <integer>1</integer>
+            <key>pfm_range_max</key>
+            <integer>20</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableDiscoveryProgressReporting</string>
+            <key>pfm_title</key>
+            <string>Enable Discovery Progress Reporting</string>
+            <key>pfm_description</key>
+            <string>Enable detailed progress reporting during printer discovery.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>AutoRefreshInterval</string>
+            <key>pfm_title</key>
+            <string>Auto-Refresh Interval</string>
+            <key>pfm_description</key>
+            <string>Automatic refresh interval in seconds (0 = disabled).</string>
+            <key>pfm_type</key>
+            <string>integer</string>
+            <key>pfm_default</key>
+            <integer>0</integer>
+            <key>pfm_range_min</key>
+            <integer>0</integer>
+            <key>pfm_range_max</key>
+            <integer>3600</integer>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>EnableSmartSubnetDetection</string>
+            <key>pfm_title</key>
+            <string>Enable Smart Subnet Detection</string>
+            <key>pfm_description</key>
+            <string>Enable intelligent detection of likely printer subnets based on network analysis.</string>
+            <key>pfm_type</key>
+            <string>boolean</string>
+            <key>pfm_default</key>
+            <true/>
+        </dict>
+        <dict>
+            <key>pfm_name</key>
+            <string>CrossVLANDiscoveryOrder</string>
+            <key>pfm_title</key>
+            <string>Cross-VLAN Discovery Order</string>
+            <key>pfm_description</key>
+            <string>Order of cross-VLAN discovery methods to try.</string>
+            <key>pfm_type</key>
+            <string>array</string>
+            <key>pfm_subkeys</key>
+            <array>
+                <dict>
+                    <key>pfm_type</key>
+                    <string>string</string>
+                    <key>pfm_title</key>
+                    <string>Discovery Method</string>
+                    <key>pfm_description</key>
+                    <string>Cross-VLAN discovery method</string>
+                    <key>pfm_range_list</key>
+                    <array>
+                        <string>DirectIPScan</string>
+                        <string>DNSSDDiscovery</string>
+                        <string>NetworkTopology</string>
+                    </array>
+                </dict>
+            </array>
+        </dict>
+    </array>
+    <key>pfm_targets</key>
+    <array>
+        <string>user-managed</string>
+        <string>system-managed</string>
+    </array>
+    <key>pfm_unique</key>
+    <false/>
+    <key>pfm_version</key>
+    <integer>1</integer>
+</dict>
+</plist>
