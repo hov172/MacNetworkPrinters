@@ -10,25 +10,15 @@
 
 NetworkPrinter is a comprehensive macOS application designed to help users discover and install network printers from both SMB/Windows print servers and IPP (Internet Printing Protocol) servers. The application features a modern SwiftUI interface with comprehensive driver selection capabilities and is built to robustly read and apply settings managed via configuration profiles.
 
-![NetworkPrinter Main UI](images/main_ui.png)
+![NetworkPrinter Main UI](docs/images/main_ui.png)
 
-![NetworkPrinter App Settings UI](images/app_settings_ui.png)
+![NetworkPrinter App Settings UI](docs/images/app_settings_ui.png)
 
-![Print Servers Settings](images/print_servers_settings.png)
+![Print Servers Settings](docs/images/print_servers_settings.png)
 
-![Driver Mappings (Google Sheets) Settings](images/driver_mappings_settings.png)
+![Driver Mappings (Google Sheets) Settings](docs/images/driver_mappings_settings.png)
 
-![Auto-Installation and Printer Install Helper Settings](images/auto_install_helper_settings.png)
-
----
-
-## 📦 Configuration Samples
-
-Ready-to-adapt deployment files live in [`ConfigFiles/`](ConfigFiles/):
-
-* [`NetworkPrinterSettings.mobileconfig`](ConfigFiles/NetworkPrinterSettings.mobileconfig) — sample MDM configuration profile with placeholder values and inline comments for every key
-* [`com.networkprinter.preferences.plist`](ConfigFiles/com.networkprinter.preferences.plist) — sample managed-preferences plist for the `com.networkprinter.preferences` domain
-* [`DefaultPrinterDriverMappings.json`](ConfigFiles/DefaultPrinterDriverMappings.json) — the bundled driver mappings, as a format reference for your own Google Sheet or hosted mapping file
+![Auto-Installation and Printer Install Helper Settings](docs/images/auto_install_helper_settings.png)
 
 ---
 
