@@ -10,7 +10,7 @@ The NetworkPrinter app supports three flexible methods for mapping printer names
 
 The system uses a priority hierarchy: **MDM → Remote JSON → Google Sheets → Bundled Defaults**
 
-> **Scope**: NetworkPrinter targets **SMB/CIFS and USB printers only** — it is not an IPP/AirPrint client. All mapping methods apply to SMB print-server queues (USB printers are matched by model, not by mapping name).
+**NEW**: All driver mapping methods work seamlessly with both **SMB/CIFS** and **IPP/IPPS** printers!
 
 ---
 
@@ -18,16 +18,18 @@ The system uses a priority hierarchy: **MDM → Remote JSON → Google Sheets �
 
 **You no longer have to map every printer.** The mapping table (MDM `PrinterDriverMappings`, a remote JSON/CSV endpoint, or a Google Sheet) remains the **highest-priority** driver source — an explicit entry always wins — but it is now a *fallback-optional convenience* for overrides and edge cases, not a hard requirement.
 
-When a discovered SMB printer is **not** in the mapping, the app auto-resolves a driver the way Apple's **Add Printer** effectively does, instead of falling back to a generic PostScript PPD:
+When a discovered printer is **not** in the mapping, the app auto-resolves a driver the way Apple's **Add Printer** effectively does, instead of falling back to a generic PostScript PPD:
 
 ### 🎯 Driver resolution order
 1. **IT driver mapping (highest priority)** — an exact/fuzzy entry from MDM, the remote endpoint, or the Google Sheet always wins. Use it for overrides.
-2. **SMB print-server queues** — the app parses the model out of the share **comment/location** text (e.g. `Financial Aid HP LaserJet P3015n`) and **fuzzy-matches** it against the CUPS driver database (`lpinfo -m`); the tokenized score weights model numbers and tolerates suffixes, so `P3015n` matches the `HP LaserJet P3015` PPD.
-3. **SNMP** is only queried against a real **printer IP**, never against an SMB print server.
-4. **Generic driver + manual picker (last resort)** — used **only** when nothing above clears the confidence threshold. Unmapped printers are no longer given a generic driver by default; `AllowFallbackWithGenericSuggestion` still gates whether generic is offered.
+2. **IPP / AirPrint printers** — the app reads the printer's advertised **make-and-model** (`ipptool` get-printer-attributes) and prefers **driverless "everywhere"** when supported.
+3. **SMB print-server queues** — the app parses the model out of the share **comment/location** text (e.g. `Financial Aid HP LaserJet P3015n`) and **fuzzy-matches** it against the CUPS driver database (`lpinfo -m`); the tokenized score weights model numbers and tolerates suffixes, so `P3015n` matches the `HP LaserJet P3015` PPD.
+4. **SNMP** is only queried against a real **printer IP**, never against an SMB print server.
+5. **Generic driver + manual picker (last resort)** — used **only** when nothing above clears the confidence threshold. Unmapped printers are no longer given a generic driver by default.
 
 ### 💡 What this means for IT
-- **Mapping is for overrides and edge cases**, not full inventory coverage. Add an entry when auto-detection picks the wrong PPD, when you want to pin a specific driver, or for printers whose share text is missing or ambiguous.
+- **Mapping is for overrides and edge cases**, not full inventory coverage. Add an entry when auto-detection picks the wrong PPD, when you want to pin a specific driver, or for printers whose make-and-model / share text is missing or ambiguous.
+- Everything below still works as documented — it now co-exists with automatic detection.
 
 ---
 
@@ -57,7 +59,7 @@ When a discovered SMB printer is **not** in the mapping, the app auto-resolves a
 3. Upload the XML configuration profile
 4. Assign to appropriate device groups
 
-#### 2. Configuration Profile Example
+#### 2. Enhanced Configuration Profile with IPP Support
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -104,6 +106,10 @@ When a discovered SMB printer is **not** in the mapping, the app auto-resolves a
                         <dict>
                             <key>mcx_preference_settings</key>
                             <dict>
+                                <!-- Discovery Mode Configuration -->
+                                <key>DiscoveryMode</key>
+                                <string>Both</string>
+                                
                                 <!-- SMB Server Configuration -->
                                 <key>PrintServerHost</key>
                                 <string>printserver.company.com</string>
@@ -111,51 +117,68 @@ When a discovered SMB printer is **not** in the mapping, the app auto-resolves a
                                 <integer>445</integer>
                                 <key>PrintServerDomain</key>
                                 <string>COMPANY</string>
-
+                                
+                                <!-- IPP Server Configuration -->
+                                <key>IPPServerHost</key>
+                                <string>ippserver.company.com</string>
+                                <key>IPPServerPort</key>
+                                <integer>631</integer>
+                                <key>IPPUseSSL</key>
+                                <false/>
+                                <key>IPPRequireAuthentication</key>
+                                <true/>
+                                
                                 <!-- Authentication Settings -->
                                 <key>RequireAuthentication</key>
                                 <true/>
                                 <key>DefaultDomain</key>
                                 <string>COMPANY</string>
-
-                                <!-- User Permissions (enforced) -->
+                                
+                                <!-- User Permissions -->
                                 <key>AllowUserServerChange</key>
                                 <false/>
                                 <key>AllowUserInstall</key>
                                 <true/>
                                 <key>AllowUserUninstall</key>
                                 <true/>
-
+                                
                                 <!-- Installation Behavior -->
                                 <key>AutoInstallPrinters</key>
                                 <false/>
                                 <!-- Non-empty: only these named printers auto-install (case-insensitive).
-                                     Empty: only printers published by the configured print server(s) — never USB. -->
+                                     Empty: only printers published by the configured print server(s) — never ad-hoc mDNS/AirPrint, never USB. -->
                                 <key>AutoInstallPrinterNames</key>
                                 <array/>
                                 <key>AutoInstallDefaultPrinter</key>
                                 <string></string>
-
+                                
                                 <!-- Logging and Fallback -->
                                 <key>EnableDetailedLogging</key>
                                 <false/>
                                 <key>AllowFallbackWithGenericSuggestion</key>
                                 <false/>
-
-                                <!-- Driver Mappings (overrides; fallback-optional) -->
+                                
+                                <!-- Driver Mappings (Works for both SMB and IPP!) -->
                                 <key>PrinterDriverMappings</key>
                                 <dict>
+                                    <!-- SMB Printers -->
                                     <key>CORP-HP-4015-FL1</key>
                                     <string>/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz</string>
                                     <key>CORP-CANON-5535-FL2</key>
                                     <string>/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz</string>
+                                    
+                                    <!-- IPP Printers -->
+                                    <key>IPP-CUPS-COLOR-01</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/Generic ColorLaser.ppd</string>
+                                    <key>Office-Printer-Main</key>
+                                    <string>/Library/Printers/PPDs/Contents/Resources/HP Color LaserJet.ppd.gz</string>
                                 </dict>
-
+                                
                                 <!-- Remote Driver Management -->
                                 <key>DriverMappingsURL</key>
                                 <string>https://your-company.com/printer-drivers.json</string>
-
-                                <!-- Google Sheets Integration (placeholders only) -->
+                                
+                                <!-- Google Sheets Integration -->
                                 <key>GoogleSheetsID</key>
                                 <string>YOUR_GOOGLE_SHEETS_ID</string>
                                 <key>GoogleSheetsAPIKey</key>
@@ -187,14 +210,16 @@ sudo profiles -C -v | grep com.networkprinter.preferences
 
 # Check specific preferences
 defaults read com.networkprinter.preferences PrinterDriverMappings
-defaults read com.networkprinter.preferences AutoInstallPrinterNames
+defaults read com.networkprinter.preferences DiscoveryMode
+defaults read com.networkprinter.preferences IPPServerHost
 ```
 
-#### 2. Verify Discovery & Mapping
+#### 2. Test Both Protocols
 1. Open NetworkPrinter app
-2. Check Console.app for logs: `com.slc.NetworkPrinter` subsystem
+2. Check Console.app for logs: `NetworkPrinter` subsystem
 3. Look for: `"Using MDM managed printer driver mappings"`
-4. Confirm SMB discovery works and driver suggestions appear
+4. Verify both SMB and IPP discovery work
+5. Test driver suggestions for both printer types
 
 ---
 
@@ -203,19 +228,48 @@ defaults read com.networkprinter.preferences AutoInstallPrinterNames
 ### Prerequisites
 - Web server with HTTPS support
 - JSON/CSV file hosting capability
+- Basic web development knowledge
 
 ### Setup Steps
 
-#### 1. Simple Flat JSON (Recommended)
+#### 1. Create Enhanced JSON Format (Supports Both Protocols)
+
+```json
+{
+  "version": "2025.01.11",
+  "last_updated": "2025-01-11T10:30:00Z",
+  "protocol_support": ["SMB", "IPP"],
+  "mappings": {
+    "SMB_Printers": {
+      "CORP-HP-4015-FL1": "/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz",
+      "CORP-CANON-5535-FL2": "/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz",
+      "Finance-HPLJ451c": "/Library/Printers/PPDs/Contents/Resources/HP LaserJet 400 Series.ppd.gz"
+    },
+    "IPP_Printers": {
+      "Office-Printer-Main": "/Library/Printers/PPDs/Contents/Resources/HP Color LaserJet.ppd.gz",
+      "IPP-CUPS-COLOR-01": "/Library/Printers/PPDs/Contents/Resources/Generic ColorLaser.ppd",
+      "Reception-Printer": "/Library/Printers/PPDs/Contents/Resources/Canon Color ImageCLASS.ppd.gz"
+    },
+    "Universal_Mappings": {
+      "HP-LaserJet-Pro-4015n": "/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz",
+      "Canon-iR-ADV-C5535i": "/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz"
+    }
+  }
+}
+```
+
+#### 2. Simple Flat JSON (Recommended)
 ```json
 {
   "CORP-HP-4015-FL1": "/Library/Printers/PPDs/Contents/Resources/HP LaserJet Pro 4015n.ppd.gz",
   "CORP-CANON-5535-FL2": "/Library/Printers/PPDs/Contents/Resources/Canon iR-ADV C5535i PS.ppd.gz",
-  "Finance-HPLJ451c": "/Library/Printers/PPDs/Contents/Resources/HP LaserJet 400 Series.ppd.gz"
+  "Office-Printer-Main": "/Library/Printers/PPDs/Contents/Resources/HP Color LaserJet.ppd.gz",
+  "IPP-CUPS-COLOR-01": "/Library/Printers/PPDs/Contents/Resources/Generic ColorLaser.ppd",
+  "Reception-Printer": "/Library/Printers/PPDs/Contents/Resources/Canon Color ImageCLASS.ppd.gz"
 }
 ```
 
-#### 2. Testing Remote JSON
+#### 3. Testing Remote JSON
 ```bash
 # Test JSON endpoint
 curl -H "Accept: application/json" \
@@ -224,7 +278,9 @@ curl -H "Accept: application/json" \
 
 # Validate JSON format
 python3 -c "
-import json, urllib.request
+import json
+import urllib.request
+
 url = 'https://your-company.com/printer-drivers.json'
 try:
     with urllib.request.urlopen(url) as response:
@@ -247,28 +303,35 @@ except Exception as e:
 - Google Cloud Console project
 - Google Sheets API enabled
 
-### Setup
+### Enhanced Google Sheets Setup
 
-#### 1. Create Spreadsheet
+#### 1. Create Multi-Protocol Spreadsheet
 
-**Sheet Structure:**
+**Sheet Structure (works for both SMB and IPP):**
 ```
-     A                         B
-1    Printer Name              Driver Path
-2    CORP-HP-4015-FL1          /Library/Printers/PPDs/.../HP LaserJet Pro 4015n.ppd.gz
-3    CORP-CANON-5535-FL2       /Library/Printers/PPDs/.../Canon iR-ADV C5535i PS.ppd.gz
+     A                         B                                    C
+1    Printer Name              Driver Path                          Protocol
+2    CORP-HP-4015-FL1          /Library/Printers/PPDs/.../HP...     SMB
+3    Office-Printer-Main       /Library/Printers/PPDs/.../HP...     IPP
+4    CORP-CANON-5535-FL2       /Library/Printers/PPDs/.../Canon...  SMB
+5    IPP-CUPS-COLOR-01         /Library/Printers/PPDs/.../Generic... IPP
+6    Reception-Printer         /Library/Printers/PPDs/.../Canon...  Both
 ```
+
+**Note**: Column C (Protocol) is optional - the app will use the printer name for mapping regardless of protocol.
 
 #### 2. Configuration for Google Sheets
 ```bash
-# Placeholders only — supply your real values via MDM, not source control
+# Configure for mixed environment
 defaults write com.networkprinter.preferences GoogleSheetsID "YOUR_GOOGLE_SHEETS_ID"
 defaults write com.networkprinter.preferences GoogleSheetsAPIKey "YOUR_GOOGLE_SHEETS_API_KEY"
 defaults write com.networkprinter.preferences GoogleSheetsRange "Sheet1!A:B"
+defaults write com.networkprinter.preferences DiscoveryMode "Both"
 ```
 
 #### 3. Testing Google Sheets Integration
 ```bash
+# Test API access
 SHEET_ID="YOUR_GOOGLE_SHEETS_ID"
 API_KEY="YOUR_GOOGLE_SHEETS_API_KEY"
 RANGE="Sheet1!A:B"
@@ -276,41 +339,118 @@ RANGE="Sheet1!A:B"
 curl "https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}"
 ```
 
-> **Security**: never commit a real Google Sheets ID or API key. Use placeholders in source control and inject real values through MDM. Keys committed in earlier versions remain in git history and must be rotated/revoked.
-
 ---
 
-## SMB/CIFS Testing
+## Protocol-Specific Testing
 
+### SMB/CIFS Testing
 ```bash
-# Test SMB connectivity (use Kerberos SSO where available; avoid embedding a password)
-smbutil view //username@server
+# Test SMB connectivity
+smbutil view //username:password@server
 
-# Watch SMB printer discovery
+# Check SMB printer discovery
 log stream --predicate 'subsystem == "com.slc.NetworkPrinter" and category == "PrinterDiscoveryService"' --level debug
 
-# Enable detailed file logging while troubleshooting
-defaults write com.networkprinter.preferences EnableDetailedLogging -bool true
+# Test SMB printer installation
+# Look for logs: "Preparing to install SMB network printer"
 ```
 
-Detailed file logging is gated by `EnableDetailedLogging` (default off); error and fault lines are always written, and all log output is credential-redacted.
+### IPP Testing
+```bash
+# Test IPP connectivity
+ippfind -T 5 -x echo "Found: {service_uri}" \;
+
+# Check IPP printer discovery
+log stream --predicate 'subsystem == "com.slc.NetworkPrinter" and category == "IPPDiscoveryService"' --level debug
+
+# Test IPP printer installation  
+# Look for logs: "Preparing to install IPP printer"
+```
+
+### Mixed Environment Testing
+```bash
+# Enable detailed logging for both protocols
+defaults write com.networkprinter.preferences EnableDetailedLogging -bool true
+defaults write com.networkprinter.preferences DiscoveryMode "Both"
+
+# Launch app and check Console.app for:
+# - "Discovery mode: Both SMB & IPP"
+# - "SMB printer discovery completed"
+# - "IPP printer discovery completed"
+# - Driver mapping logs for both protocols
+```
 
 ---
 
-## Key Benefits of the Driver System
+## Key Benefits of Updated Driver System
 
-### 🧠 Automatic
-- Unmapped SMB printers auto-resolve via share-comment model parsing + fuzzy `lpinfo -m` matching
-- Mapping is reserved for overrides and edge cases
+### 🔄 **Protocol Agnostic**
+- Same driver mappings work for SMB and IPP printers
+- No need to maintain separate mapping systems
+- Seamless mixed environment support
 
-### 📊 Unified Management
-- Single source of truth (MDM, JSON, or Google Sheets) for driver overrides
+### 📊 **Unified Management**
+- Single source of truth for all printer drivers
+- Same Google Sheets/JSON works for all protocols
 - Consistent MDM configuration approach
 
-### 🔍 Debuggable
-- `EnableDetailedLogging`-gated, credential-redacted logs
-- Clear identification of matched drivers and confidence
+### 🎯 **Enhanced Flexibility**
+- Discovery mode selection (SMB, IPP, Both)
+- Protocol-specific server configurations
+- Fallback and priority systems maintained
+
+### 🔍 **Improved Debugging**
+- Enhanced logging for both protocols
+- Clear identification of printer types
+- Separate validation for each protocol
 
 ---
 
-This guide covers SMB/CIFS driver mapping and testing. NetworkPrinter installs SMB print-server queues and local USB printers only — it is not an IPP/AirPrint client.
+## Advanced Configuration Examples
+
+### Mixed Environment Configuration
+```xml
+<!-- Support both SMB and IPP in same environment -->
+<key>DiscoveryMode</key>
+<string>Both</string>
+<key>PrintServerHost</key>
+<string>smb-server.company.com</string>
+<key>IPPServerHost</key>
+<string>ipp-server.company.com</string>
+<key>RequireAuthentication</key>
+<true/>
+<key>IPPRequireAuthentication</key>
+<true/>
+```
+
+### IPP-Only Environment
+```xml
+<!-- IPP-only setup for modern environments -->
+<key>DiscoveryMode</key>
+<string>IPP</string>
+<key>IPPServerHost</key>
+<string>cups.company.com</string>
+<key>IPPServerPort</key>
+<integer>631</integer>
+<key>IPPUseSSL</key>
+<false/>
+<key>IPPRequireAuthentication</key>
+<true/>
+```
+
+### Legacy SMB-Only Environment
+```xml
+<!-- Traditional SMB setup -->
+<key>DiscoveryMode</key>
+<string>SMB</string>
+<key>PrintServerHost</key>
+<string>printserver.company.com</string>
+<key>PrintServerDomain</key>
+<string>COMPANY</string>
+<key>RequireAuthentication</key>
+<true/>
+```
+
+---
+
+This enhanced guide now fully supports both SMB/CIFS and IPP/IPPS printer protocols while maintaining the same simple driver mapping system across all printer types.
