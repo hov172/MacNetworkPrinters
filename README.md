@@ -83,6 +83,23 @@ When a printer **is** in the IT driver mapping, that mapping always wins. When i
 
 This hybrid resolution runs entirely through **`DriverMatching`** (`ModelExtractor` + `DriverMatcher`) and the `DriverManagementService`, so IT can override any result with an explicit mapping.
 
+### Detection by Connection Type
+
+Driver auto-detection works on **every** connection type — all installs route through the same hybrid resolver:
+
+| Connection | Detection path | If nothing matches |
+|---|---|---|
+| **IPP server / AirPrint / IPP Everywhere** | IT mapping → driverless `everywhere` when the printer advertises AirPrint/IPP Everywhere → the printer's own advertised make-and-model via `ipptool` (the mapping can also match that string) → fuzzy match against the CUPS driver database | Falls back to **driverless** — always a working endpoint |
+| **SMB print server** | IT mapping → model parsed from the share comment/location (e.g. *"Financial Aid HP LaserJet P3015n"*) → SNMP (only against a real printer IP, never the print server) → PPD cache + `lpinfo -m` fuzzy match | Manual driver picker |
+| **USB** | IT mapping → the device-reported make-and-model → PPD cache + `lpinfo -m` fuzzy match | Manual driver picker |
+
+Three guarantees, regardless of connection type:
+
+1. **The IT mapping (Google Sheets / MDM) always wins first**, so fleet-managed printers behave identically however they are discovered.
+2. **Low-confidence results never install silently** — a generic or below-threshold match surfaces the manual driver picker instead of installing the wrong driver.
+3. **Standard-user installs resolve identically** — the privileged helper re-validates the chosen driver against its own `lpinfo -m` inventory and accepts driverless for IPP.
+
+
 ---
 
 ## 🚀 Configuration Setup
