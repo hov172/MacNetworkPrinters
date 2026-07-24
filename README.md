@@ -1,6 +1,6 @@
 # 👨‍💼 Maintain and Build
 
-**Jesus M. Ayala - ITS Help Desk Manager, Sarah Lawrence College**
+**Jesus M. Ayala - Ayala Solutions**
 
 > For bugs or enhancements, please open an issue.
 
