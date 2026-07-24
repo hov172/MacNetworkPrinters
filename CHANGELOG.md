@@ -12,6 +12,8 @@ in-app updater.
 ### ✨ Added
 
 * **🔐 SMB "Require authentication" toggle** — the SMB print server settings now expose the existing `RequireAuthentication` preference (previously MDM/defaults-only), mirroring the IPP toggle; it is disabled when the key is managed or server editing is locked by IT policy.
+* **👋 Sign Out** — a Sign Out action in the header (next to the signed-in identity) and the app menu (⌘L) drops the saved password sign-in and re-discovers, re-prompting if the server requires credentials. Offered for password sessions only — Kerberos SSO has no app-level session to sign out of (the ticket belongs to the macOS login session and is never destroyed).
+* **🔌 Disconnect Server** — each server section in Settings gains a Disconnect button (with confirmation) that clears that section's server settings and signs out; discovery falls back to serverless sources (AirPrint/mDNS/USB). Hidden when the server keys are profile-managed — a managed value would snap right back — and disabled when server editing is locked by IT policy. Installed CUPS queues keep printing either way.
 
 ### 🐛 Fixed
 
