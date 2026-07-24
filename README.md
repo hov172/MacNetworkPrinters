@@ -92,6 +92,23 @@ Three guarantees, regardless of connection type:
 
 ---
 
+## 🖨️ How AirPrint Setup Works
+
+AirPrint printers require no configuration at all — the whole chain from discovery to a working queue is automatic:
+
+1. **Discovery (Bonjour/mDNS)** — `IPPDiscoveryService` browses the local network for the AirPrint service types (`_ipp._tcp`, `_ipps._tcp`, `_airprint._tcp`, and `_ipp-everywhere._tcp` for IPP Everywhere), running `ippfind` and DNS-SD lookups concurrently with every other discovery source. The printer's Bonjour TXT record supplies its human-readable model (`ty`), location, and capabilities.
+2. **De-duplication** — the same physical printer is usually advertised several times (plain `ipp://` *and* secure `ipps://`, plus multiple service types). All adverts are merged centrally and protocol variants are collapsed into **one** entry per physical printer, preferring the secure `ipps://` endpoint when both are advertised.
+3. **Queue naming** — the advertised name is sanitized into a CUPS-legal queue name before install: spaces and other characters CUPS rejects become hyphens (e.g. *"HP LaserJet — Front Office"* installs as `HP-LaserJet-Front-Office`) — without this, `lpadmin` rejects the install outright ("Printer name can only contain printable characters"). This is why installed printers appear with hyphens instead of spaces.
+4. **Driver selection** — an IT mapping (Google Sheets / MDM) always wins if one matches. Otherwise, because the printer advertises AirPrint/IPP Everywhere, the app uses Apple's driverless path: `lpadmin -m everywhere`, which lets CUPS query the printer directly for its capabilities — no PPD, no vendor driver. If neither applies, the app reads the printer's own advertised make-and-model (`ipptool get-printer-attributes`) and fuzzy-matches the CUPS driver database, falling back to driverless — so an AirPrint install always ends at a working endpoint.
+5. **Installation** — the queue is created with `lpadmin` against the discovered `ipp://`/`ipps://` device URI, either directly (admin users) or through the bundled privileged helper (standard users), which re-validates the driver choice and accepts the driverless `everywhere` keyword.
+
+Two things IT should know:
+
+* **Local Network permission is required** — on first discovery macOS asks *"NetworkPrinter would like to find and connect to devices on your local network"*. Until this is allowed (System Settings → Privacy & Security → Local Network), AirPrint/mDNS discovery finds nothing. Under MDM this cannot be pre-approved with a profile; see the deployment notes.
+* **Auto-install never grabs ad-hoc AirPrint printers** — `AutoInstallPrinterNames` only auto-installs explicitly named printers or queues published by the configured print server(s), never arbitrary mDNS/AirPrint discoveries. Users can still install discovered AirPrint printers manually from the list.
+
+---
+
 ## 🚀 Configuration Setup
 
 ### 📘 Quick Start Guide
