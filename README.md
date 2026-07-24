@@ -8,6 +8,8 @@
 
 # 🖨️ NetworkPrinter macOS Application
 
+**Current release: 4.4.1** (IPP edition) — see the [CHANGELOG](CHANGELOG.md) for what's new.
+
 NetworkPrinter is a comprehensive macOS application designed to help users discover and install network printers from both SMB/Windows print servers and IPP (Internet Printing Protocol) servers. The application features a modern SwiftUI interface with comprehensive driver selection capabilities and is built to robustly read and apply settings managed via configuration profiles.
 
 ![NetworkPrinter Main UI](docs/images/main_ui.png)
@@ -35,6 +37,8 @@ NetworkPrinter is a comprehensive macOS application designed to help users disco
 * **🔎 Search and Filter**: Quickly find printers by name or location across all protocols
 * **📦 Batch Operations**: Select and install multiple printers at once from any protocol
 * **🔐 MDM Configuration**: Supports managed deployment via macOS configuration profiles
+* **👋 Sign Out & Disconnect**: Sign Out (header or ⌘L) drops the saved password sign-in and re-discovers; each server section in Settings has a Disconnect button that clears the server settings and signs out. Both respect MDM: Disconnect is hidden when the server keys are profile-managed, and Kerberos SSO sessions offer no Sign Out (the ticket belongs to the macOS login session)
+* **🔒 Settings Lock**: The padlock in Settings sets a session lock that makes all admin-gated settings read-only — even for admins and past the unmanaged `AllowUserServerChange` default — until an administrator re-authenticates; privileged operations (`lpadmin` routing) are unaffected
 * **🪵 Redacted, Gated Logging**: Credentials are redacted before anything is written; the detailed file log is gated by `EnableDetailedLogging` (errors are always logged)
 * **🌐 Protocol Flexibility**: Support for SMB/CIFS, IPP/IPPS, and mixed environments
 
@@ -886,6 +890,7 @@ profiles -C -v | grep networkprinter
 
 * **Only SMB printers found**: Check `IPPServerHost` configuration and IPP server connectivity
 * **Only IPP printers found**: Check `PrintServerHost` configuration and SMB server connectivity  
+* **No SMB printers from a domain print server**: the server likely rejects anonymous browsing. The app raises the sign-in prompt automatically when the server rejects authentication; to always be prompted when no Kerberos ticket or saved sign-in exists, enable **Require authentication** in the SMB server settings (or the `RequireAuthentication` MDM key).
 * **No printers found**: Verify `DiscoveryMode` is set correctly and both servers are accessible
 * **Local Network permission**: on first discovery, macOS asks *"NetworkPrinter would like to find and connect to devices on your local network"* — AirPrint / IPP Everywhere / mDNS discovery finds nothing until this is allowed. Check **System Settings → Privacy & Security → Local Network** if the app isn't listed or was denied.
 * **Printer on another VLAN**: Bonjour/mDNS does not cross VLANs. Either enable mDNS reflection on the gateway (e.g. UniFi's *Multicast DNS*), add the printer's subnet under **Settings → Cross-VLAN Discovery**, or configure the print server address directly.
