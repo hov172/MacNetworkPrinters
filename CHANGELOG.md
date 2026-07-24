@@ -7,7 +7,7 @@ and this project adheres to semantic versioning. App and fleet updates are
 distributed to managed Macs as versioned PKGs via MDM — there is deliberately no
 in-app updater.
 
-## [Unreleased]
+## [4.4.1] — 2026-07-23
 
 ### ✨ Added
 
