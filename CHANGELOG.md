@@ -17,6 +17,7 @@ in-app updater.
 
 ### 🐛 Fixed
 
+* **🔒 Settings padlock actually locks** — for a permanent admin the padlock only cleared the *temporary* unlock flag, so it toasted "Settings locked" while every field stayed editable; and on unmanaged Macs the `AllowUserServerChange=true` default made server fields editable regardless. The padlock now sets a session lock that makes all admin-gated settings (server fields, discovery mode, auto-install, subnets, …) read-only — including past the unmanaged default — until an admin re-authenticates. The lock gates settings editing only: `hasAdminPrivileges` is untouched, so privileged operations like `lpadmin` routing are unaffected, and a relaunch starts unlocked.
 * **🪪 Domain print servers no longer fail silently without credentials** — with no Kerberos ticket and no saved sign-in, discovery ran anonymously and the server's rejection (`smbutil: server rejected the authentication: Authentication error`, exit 77) was neither recognized as an authentication failure nor surfaced — it was swallowed whenever another source (e.g. USB via `lpinfo`) returned printers, leaving zero SMB queues and no error. The error classifier now recognizes all of smbutil's authentication-rejection wordings, an authentication failure is always surfaced from the smbutil fallback, and a partial-source authentication failure now raises the credential prompt while keeping the printers found by the other sources.
 
 ## [4.4.0] — 2026-07-23
