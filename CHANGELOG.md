@@ -7,6 +7,16 @@ and this project adheres to semantic versioning. App and fleet updates are
 distributed to managed Macs as versioned PKGs via MDM — there is deliberately no
 in-app updater.
 
+## [Unreleased]
+
+### ✨ Added
+
+* **🔐 SMB "Require authentication" toggle** — the SMB print server settings now expose the existing `RequireAuthentication` preference (previously MDM/defaults-only), mirroring the IPP toggle; it is disabled when the key is managed or server editing is locked by IT policy.
+
+### 🐛 Fixed
+
+* **🪪 Domain print servers no longer fail silently without credentials** — with no Kerberos ticket and no saved sign-in, discovery ran anonymously and the server's rejection (`smbutil: server rejected the authentication: Authentication error`, exit 77) was neither recognized as an authentication failure nor surfaced — it was swallowed whenever another source (e.g. USB via `lpinfo`) returned printers, leaving zero SMB queues and no error. The error classifier now recognizes all of smbutil's authentication-rejection wordings, an authentication failure is always surfaced from the smbutil fallback, and a partial-source authentication failure now raises the credential prompt while keeping the printers found by the other sources.
+
 ## [4.4.0] — 2026-07-23
 
 ### 🔧 Changed
