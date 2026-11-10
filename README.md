@@ -6,7 +6,7 @@
 
 ---
 
-# 🖨️ NetworkPrinter macOS Application
+# <img src="docs/images/app-icon.png" width="48" align="top" alt=""> NetworkPrinter macOS Application
 
 **Current release: 4.4.1** (IPP edition) — see the [CHANGELOG](CHANGELOG.md) for what's new.
 
